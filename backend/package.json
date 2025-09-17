@@ -18,7 +18,7 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:reset": "prisma migrate reset",
-    "db:setup": "npm run prisma:generate:dev && npm run prisma:push:dev && npm run prisma:seed",
+    "db:setup": "npm run prisma:generate:dev && npm run prisma:push:dev",
     "prisma:generate:dev": "prisma generate --schema=./prisma/schema.dev.prisma",
     "prisma:push:dev": "prisma db push --schema=./prisma/schema.dev.prisma",
     "prisma:db:push": "prisma db push",

@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -11,52 +10,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  SUPER_ADMIN
-  TENANT_ADMIN
-  TENANT_USER
-  END_USER
-}
-
-enum TokenType {
-  REFRESH
-  PASSWORD_RESET
-  EMAIL_VERIFICATION
-}
-
-enum TenantStatus {
-  TRIAL
-  ACTIVE
-  SUSPENDED
-  INACTIVE
-}
-
-enum TenantPlan {
-  FREE
-  STARTER
-  PROFESSIONAL
-  ENTERPRISE
-}
-
-enum DocumentStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-
-enum PresenceStatus {
-  ONLINE
-  OFFLINE
-  AWAY
-  BUSY
-}
+// SQLite doesn't support enums, so we use String fields with defaults
 
 model Tenant {
   id                String          @id @default(uuid())
   name              String
   slug              String          @unique
-  status            TenantStatus    @default(TRIAL)
+  status            String          @default("TRIAL") // TRIAL, ACTIVE, SUSPENDED, INACTIVE
   settings          String          @default("{}")  // JSON as TEXT in SQLite
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -86,7 +46,7 @@ model User {
   fullName              String?
   avatar                String?
   avatarUrl             String?
-  role                  Role      @default(END_USER)
+  role                  String    @default("END_USER") // SUPER_ADMIN, TENANT_ADMIN, TENANT_USER, END_USER
   isActive              Boolean   @default(true)
   emailVerified         Boolean   @default(false)
   createdAt             DateTime  @default(now())
@@ -118,7 +78,7 @@ model KnowledgeDocument {
   originalName   String
   fileSize       Int
   mimeType       String
-  status         DocumentStatus @default(PROCESSING)
+  status         String         @default("PROCESSING") // PENDING, PROCESSING, COMPLETED, FAILED
   processingProgress Int @default(0)
   metadata       String?  // JSON as TEXT in SQLite
   uploadedBy     String
@@ -357,7 +317,7 @@ model RagQuery {
   query             String
   queryHash         String
   sourcesUsed       Int      @default(0)
-  confidence        Real     @default(0.0)  // REAL instead of Float for SQLite
+  confidence        Float    @default(0.0)  // Float for SQLite
   retrievalStrategy String   @default("hybrid")
   queryExpansions   String?  // JSON as TEXT in SQLite
   responseTime      Int      // milliseconds
@@ -369,6 +329,7 @@ model RagQuery {
   user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   conversation Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   citations    SourceCitation[]
+  knowledgeFeedback KnowledgeFeedback[]
 
   @@map("rag_queries")
 }
@@ -379,7 +340,7 @@ model SourceCitation {
   messageId      String?
   documentId     String
   tenantId       String
-  relevanceScore Real     // REAL instead of Float for SQLite
+  relevanceScore Float    // Float for SQLite
   citationNumber Int
   usageCount     Int      @default(1)
   excerpt        String
@@ -417,8 +378,8 @@ model RetrievalAnalytics {
   tenantId        String
   date            String   // DATE as TEXT in SQLite (YYYY-MM-DD)
   queryCount      Int      @default(0)
-  successRate     Real     @default(0.0)  // REAL instead of Float for SQLite
-  averageConfidence Real   @default(0.0)  // REAL instead of Float for SQLite
+  successRate     Float    @default(0.0)  // Float for SQLite
+  averageConfidence Float  @default(0.0)  // Float for SQLite
   topQueries      String?  // JSON as TEXT in SQLite
   topSources      String?  // JSON as TEXT in SQLite
   performanceMetrics String? // JSON as TEXT in SQLite
@@ -437,7 +398,7 @@ model ConversationSettings {
   tenantId       String
   ragMode        String   @default("hybrid") // "knowledge_only", "hybrid", "general"
   maxSources     Int      @default(5)
-  confidenceThreshold Real @default(0.3)  // REAL instead of Float for SQLite
+  confidenceThreshold Float @default(0.3)  // Float for SQLite
   citationStyle  String   @default("numbered") // "numbered", "inline", "footnote"
   includeConfidence Boolean @default(true)
   autoSuggestQuestions Boolean @default(true)
