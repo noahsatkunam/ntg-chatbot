@@ -57,6 +57,7 @@
     "npm": ">=8.0.0"
   },
   "dependencies": {
+    "lovable-tagger": "^1.1.9",
     "web-vitals": "^5.1.0"
   }
 }
