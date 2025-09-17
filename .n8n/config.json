@@ -1,0 +1,17 @@
+{
+  "database": {
+    "type": "sqlite",
+    "database": ".n8n/database.sqlite"
+  },
+  "credentials": {
+    "overwrite": {
+      "data": "{\"host\":\"localhost\",\"port\":3001,\"username\":\"\",\"password\":\"\"}"
+    }
+  },
+  "nodes": {
+    "exclude": []
+  },
+  "settings": {
+    "timezone": "America/Los_Angeles"
+  }
+}

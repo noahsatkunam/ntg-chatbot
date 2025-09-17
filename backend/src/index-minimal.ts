@@ -15,6 +15,7 @@ import { createServer } from 'http';
 import { initializeLocalDevelopment, isLocalDevelopment } from './config/localDevelopment.js';
 import path from 'path';
 import healthRoutes from './routes/health';
+import webhookRoutes from './routes/webhooks';
 
 // Load environment variables
 dotenv.config();
@@ -85,11 +86,12 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Logging
 app.use(pinoHttp({ logger }));
 
-// Health routes only
+// Health routes and webhooks
 app.use('/api', healthRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Basic API info endpoint
-app.get('/api', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({
     name: 'NTG Chatbot Backend',
     version: '1.0.0',
