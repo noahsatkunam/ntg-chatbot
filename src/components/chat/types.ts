@@ -16,7 +16,7 @@ export interface MessageReaction {
   count: number;
 }
 
-export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | 'queued';
 
 export interface Attachment {
   id: string;

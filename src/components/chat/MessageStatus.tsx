@@ -20,6 +20,8 @@ export const MessageStatus = ({ status, className = '' }: MessageStatusProps) =>
         return <CheckCheck className="w-3 h-3 text-chat-primary" />;
       case 'failed':
         return <AlertCircle className="w-3 h-3 text-destructive" />;
+      case 'queued':
+        return <Clock className="w-3 h-3 text-yellow-500" />;
       default:
         return null;
     }
@@ -37,6 +39,8 @@ export const MessageStatus = ({ status, className = '' }: MessageStatusProps) =>
         return 'Read';
       case 'failed':
         return 'Failed to send';
+      case 'queued':
+        return 'Queued for sending';
       default:
         return '';
     }

@@ -1,11 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import { Message, Attachment, MessageReaction, TypingUser } from './types';
+import { Message, Attachment, TypingUser } from './types';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export const ChatWindow = () => {
-  const [messages, setMessages] = useState<Message[]>([
+  const currentUser = {
+    id: 'current-user',
+    name: 'You',
+    avatar: undefined
+  };
+
+  const {
+    connectionStatus,
+    typingUsers,
+    onlineUsers,
+    messages: realtimeMessages,
+    messageQueue,
+    connect,
+    sendMessage: sendRealtimeMessage,
+    startTyping,
+    stopTyping
+  } = useWebSocket({
+    userId: currentUser.id,
+    userName: currentUser.name,
+    roomId: 'default',
+    avatar: currentUser.avatar
+  });
+
+  const [localMessages, setLocalMessages] = useState<Message[]>([
     {
       id: '1',
       content: "Hello! I'm your AI assistant. How can I help you today?\n\nI can help you with:\n- Answering questions\n- Code assistance with syntax highlighting\n- File analysis\n- And much more!\n\nTry sending a message with some code:\n\n```javascript\nfunction greet(name) {\n  console.log(`Hello, ${name}!`);\n}\n\ngreet('World');\n```",
@@ -18,7 +42,9 @@ export const ChatWindow = () => {
     }
   ]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [typingUsers] = useState<TypingUser[]>([]);
+
+  // Combine local messages with realtime messages
+  const allMessages = [...localMessages, ...realtimeMessages];
 
   const handleSendMessage = (content: string, attachments?: Attachment[], replyToId?: string) => {
     const userMessage: Message = {
@@ -28,53 +54,60 @@ export const ChatWindow = () => {
       timestamp: new Date(),
       attachments,
       replyTo: replyToId,
-      status: 'sending',
+      status: connectionStatus.status === 'connected' ? 'sending' : 'queued',
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setLocalMessages(prev => [...prev, userMessage]);
 
-    // Update message status
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === userMessage.id 
-          ? { ...msg, status: 'sent' as const }
-          : msg
-      ));
-    }, 500);
+    // Send via WebSocket if connected
+    if (connectionStatus.status === 'connected') {
+      sendRealtimeMessage(content, attachments, replyToId);
+      
+      // Update message status
+      setTimeout(() => {
+        setLocalMessages(prev => prev.map(msg => 
+          msg.id === userMessage.id 
+            ? { ...msg, status: 'sent' as const }
+            : msg
+        ));
+      }, 500);
 
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === userMessage.id 
-          ? { ...msg, status: 'delivered' as const }
-          : msg
-      ));
-    }, 1000);
+      setTimeout(() => {
+        setLocalMessages(prev => prev.map(msg => 
+          msg.id === userMessage.id 
+            ? { ...msg, status: 'delivered' as const }
+            : msg
+        ));
+      }, 1000);
+    }
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "I understand your question. This is a simulated response from the AI assistant with **rich text** support!",
-        "Great question! Here's some code that might help:\n\n```python\ndef process_data(data):\n    # Process the incoming data\n    result = []\n    for item in data:\n        if item.is_valid():\n            result.append(item.transform())\n    return result\n```\n\nThis function filters and transforms data efficiently.",
-        "I can help you with that! Let me break it down into steps:\n\n1. First step\n2. Second step\n3. Final step\n\n> Remember: Always test your code before deployment!",
-      ];
-      
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: responses[Math.floor(Math.random() * responses.length)],
-        role: 'assistant',
-        timestamp: new Date(),
-        status: 'read',
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
-      
-      // Mark user message as read
-      setMessages(prev => prev.map(msg => 
-        msg.id === userMessage.id 
-          ? { ...msg, status: 'read' as const }
-          : msg
-      ));
-    }, 2000);
+    // Simulate AI response (in real implementation, this would come via WebSocket)
+    if (connectionStatus.status === 'connected') {
+      setTimeout(() => {
+        const responses = [
+          "I understand your question. This is a simulated response from the AI assistant with **rich text** support!",
+          "Great question! Here's some code that might help:\n\n```python\ndef process_data(data):\n    # Process the incoming data\n    result = []\n    for item in data:\n        if item.is_valid():\n            result.append(item.transform())\n    return result\n```\n\nThis function filters and transforms data efficiently.",
+          "I can help you with that! Let me break it down into steps:\n\n1. First step\n2. Second step\n3. Final step\n\n> Remember: Always test your code before deployment!",
+        ];
+        
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: responses[Math.floor(Math.random() * responses.length)],
+          role: 'assistant',
+          timestamp: new Date(),
+          status: 'read',
+        };
+        
+        setLocalMessages(prev => [...prev, aiMessage]);
+        
+        // Mark user message as read
+        setLocalMessages(prev => prev.map(msg => 
+          msg.id === userMessage.id 
+            ? { ...msg, status: 'read' as const }
+            : msg
+        ));
+      }, 2000);
+    }
   };
 
   const handleReply = (message: Message) => {
@@ -86,7 +119,7 @@ export const ChatWindow = () => {
   };
 
   const handleReaction = (messageId: string, emoji: string, action: 'add' | 'remove') => {
-    setMessages(prev => prev.map(message => {
+    setLocalMessages(prev => prev.map(message => {
       if (message.id !== messageId) return message;
       
       const reactions = message.reactions || [];
@@ -98,7 +131,7 @@ export const ChatWindow = () => {
           const updatedReactions = [...reactions];
           updatedReactions[existingReactionIndex] = {
             ...updatedReactions[existingReactionIndex],
-            users: [...updatedReactions[existingReactionIndex].users, 'current-user'],
+            users: [...updatedReactions[existingReactionIndex].users, currentUser.id],
             count: updatedReactions[existingReactionIndex].count + 1
           };
           return { ...message, reactions: updatedReactions };
@@ -106,14 +139,14 @@ export const ChatWindow = () => {
           // Create new reaction
           return {
             ...message,
-            reactions: [...reactions, { emoji, users: ['current-user'], count: 1 }]
+            reactions: [...reactions, { emoji, users: [currentUser.id], count: 1 }]
           };
         }
       } else {
         // Remove reaction
         if (existingReactionIndex >= 0) {
           const reaction = reactions[existingReactionIndex];
-          const updatedUsers = reaction.users.filter(u => u !== 'current-user');
+          const updatedUsers = reaction.users.filter(u => u !== currentUser.id);
           
           if (updatedUsers.length === 0) {
             // Remove reaction completely
@@ -140,17 +173,27 @@ export const ChatWindow = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <ChatHeader />
+      <ChatHeader 
+        connectionStatus={connectionStatus}
+        onReconnect={connect}
+        messageQueueCount={messageQueue}
+        onlineUsers={onlineUsers}
+        currentUserId={currentUser.id}
+      />
       <ChatMessages 
-        messages={messages} 
+        messages={allMessages} 
         typingUsers={typingUsers}
         onReply={handleReply}
         onReaction={handleReaction}
+        currentUserId={currentUser.id}
       />
       <ChatInput 
         onSendMessage={handleSendMessage} 
         replyTo={replyTo}
         onCancelReply={handleCancelReply}
+        onStartTyping={startTyping}
+        onStopTyping={stopTyping}
+        disabled={connectionStatus.status === 'connecting'}
       />
     </div>
   );
