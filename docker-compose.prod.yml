@@ -1,0 +1,191 @@
+version: '3.8'
+
+services:
+  # Frontend - Nginx serving React build
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # n8n Workflow Engine
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME}
+      - DB_POSTGRESDB_USER=${N8N_DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - GENERIC_TIMEZONE=${TIMEZONE}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Nginx Proxy Manager (Optional)
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "8181:81"
+    environment:
+      - DB_MYSQL_HOST=mysql
+      - DB_MYSQL_PORT=3306
+      - DB_MYSQL_USER=${NPM_DB_USER}
+      - DB_MYSQL_PASSWORD=${NPM_DB_PASSWORD}
+      - DB_MYSQL_NAME=${NPM_DB_NAME}
+    volumes:
+      - npm_data:/data
+      - npm_ssl:/etc/letsencrypt
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+  # MySQL for Nginx Proxy Manager
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${NPM_DB_NAME}
+      - MYSQL_USER=${NPM_DB_USER}
+      - MYSQL_PASSWORD=${NPM_DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
+  prometheus_data:
+  grafana_data:
+  npm_data:
+  npm_ssl:
+  mysql_data:
+
+networks:
+  default:
+    driver: bridge
