@@ -70,6 +70,16 @@ export default {
           "input-border": "hsl(var(--chat-input-border))",
           hover: "hsl(var(--chat-hover))",
         },
+        analytics: {
+          primary: "hsl(var(--analytics-primary))",
+          secondary: "hsl(var(--analytics-secondary))",
+          accent: "hsl(var(--analytics-accent))",
+          warning: "hsl(var(--analytics-warning))",
+          error: "hsl(var(--analytics-error))",
+          neutral: "hsl(var(--analytics-neutral))",
+          bg: "hsl(var(--analytics-bg))",
+          card: "hsl(var(--analytics-card))",
+        },
       },
       backgroundImage: {
         "gradient-chat": "var(--gradient-chat)",

@@ -75,6 +75,16 @@ All colors MUST be HSL.
     --shadow-chat: 0 4px 20px -4px hsl(217.2 91.2% 59.8% / 0.15);
     --shadow-message: 0 1px 3px hsl(222.2 84% 4.9% / 0.1);
     --shadow-elegant: 0 10px 30px -10px hsl(217.2 91.2% 59.8% / 0.2);
+    
+    /* Analytics design tokens */
+    --analytics-primary: 217.2 91.2% 59.8%; /* Blue for primary metrics */
+    --analytics-secondary: 142.1 76.2% 36.3%; /* Green for positive metrics */
+    --analytics-accent: 24.6 95% 53.1%; /* Orange for highlights */
+    --analytics-warning: 38 92% 50%; /* Yellow for warnings */
+    --analytics-error: 0 84.2% 60.2%; /* Red for errors */
+    --analytics-neutral: 215.4 16.3% 46.9%; /* Gray for neutral data */
+    --analytics-bg: 210 40% 98%; /* Light background */
+    --analytics-card: 0 0% 100%; /* Card background */
   }
 
   .dark {
@@ -135,6 +145,16 @@ All colors MUST be HSL.
     --shadow-chat: 0 4px 20px -4px hsl(217.2 91.2% 59.8% / 0.3);
     --shadow-message: 0 1px 3px hsl(0 0% 0% / 0.2);
     --shadow-elegant: 0 10px 30px -10px hsl(217.2 91.2% 59.8% / 0.4);
+    
+    /* Analytics design tokens - Dark mode */
+    --analytics-primary: 217.2 91.2% 59.8%;
+    --analytics-secondary: 142.1 76.2% 36.3%;
+    --analytics-accent: 24.6 95% 53.1%;
+    --analytics-warning: 38 92% 50%;
+    --analytics-error: 0 84.2% 60.2%;
+    --analytics-neutral: 215 20.2% 65.1%;
+    --analytics-bg: 217.2 32.6% 17.5%;
+    --analytics-card: 222.2 84% 4.9%;
   }
 }
 

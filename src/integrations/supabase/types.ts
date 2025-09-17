@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_analytics: {
+        Row: {
+          cost_usd: number | null
+          created_at: string | null
+          has_knowledge_base: boolean | null
+          id: string
+          knowledge_base_queries: number | null
+          message_count: number | null
+          model_used: string | null
+          response_time_ms: number | null
+          session_id: string
+          tokens_used: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string | null
+          has_knowledge_base?: boolean | null
+          id?: string
+          knowledge_base_queries?: number | null
+          message_count?: number | null
+          model_used?: string | null
+          response_time_ms?: number | null
+          session_id: string
+          tokens_used?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string | null
+          has_knowledge_base?: boolean | null
+          id?: string
+          knowledge_base_queries?: number | null
+          message_count?: number | null
+          model_used?: string | null
+          response_time_ms?: number | null
+          session_id?: string
+          tokens_used?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_sources: {
         Row: {
           chat_session_id: string
@@ -64,6 +109,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cost_tracking: {
+        Row: {
+          billing_period: string | null
+          cost_usd: number
+          created_at: string | null
+          id: string
+          quantity: number
+          service_type: string
+          usage_type: string
+          user_id: string
+        }
+        Insert: {
+          billing_period?: string | null
+          cost_usd: number
+          created_at?: string | null
+          id?: string
+          quantity: number
+          service_type: string
+          usage_type: string
+          user_id: string
+        }
+        Update: {
+          billing_period?: string | null
+          cost_usd?: number
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          service_type?: string
+          usage_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       document_chunks: {
         Row: {
@@ -151,6 +229,50 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_base_analytics: {
+        Row: {
+          created_at: string | null
+          document_id: string | null
+          id: string
+          query_text: string | null
+          relevance_score: number | null
+          response_time_ms: number | null
+          results_found: number | null
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_id?: string | null
+          id?: string
+          query_text?: string | null
+          relevance_score?: number | null
+          response_time_ms?: number | null
+          results_found?: number | null
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: string | null
+          id?: string
+          query_text?: string | null
+          relevance_score?: number | null
+          response_time_ms?: number | null
+          results_found?: number | null
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_analytics_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base_searches: {
         Row: {
           created_at: string | null
@@ -172,6 +294,114 @@ export type Database = {
           query?: string
           results_count?: number | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      performance_metrics: {
+        Row: {
+          created_at: string | null
+          endpoint: string | null
+          error_message: string | null
+          id: string
+          metric_type: string
+          metric_value: number
+          status_code: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint?: string | null
+          error_message?: string | null
+          id?: string
+          metric_type: string
+          metric_value: number
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string | null
+          error_message?: string | null
+          id?: string
+          metric_type?: string
+          metric_value?: number
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_engagement: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          page_views: number | null
+          session_duration_ms: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          page_views?: number | null
+          session_duration_ms?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          page_views?: number | null
+          session_duration_ms?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workflow_analytics: {
+        Row: {
+          cost_usd: number | null
+          created_at: string | null
+          error_message: string | null
+          execution_status: string | null
+          execution_time_ms: number | null
+          id: string
+          steps_completed: number | null
+          tokens_used: number | null
+          total_steps: number | null
+          user_id: string
+          workflow_id: string
+          workflow_name: string | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_status?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          steps_completed?: number | null
+          tokens_used?: number | null
+          total_steps?: number | null
+          user_id: string
+          workflow_id: string
+          workflow_name?: string | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_status?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          steps_completed?: number | null
+          tokens_used?: number | null
+          total_steps?: number | null
+          user_id?: string
+          workflow_id?: string
+          workflow_name?: string | null
         }
         Relationships: []
       }
