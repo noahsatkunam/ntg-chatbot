@@ -8,10 +8,9 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
-    server: {
-      host: "::",
-      port: parseInt(env.VITE_PORT) || 5173,
-    },
+  server: {
+    port: 8080
+  },
   plugins: [
     react(),
     VitePWA({
