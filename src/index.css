@@ -53,6 +53,28 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Chat-specific design tokens */
+    --chat-primary: 217.2 91.2% 59.8%;
+    --chat-primary-foreground: 0 0% 100%;
+    --chat-secondary: 210 40% 96.1%;
+    --chat-secondary-foreground: 222.2 47.4% 11.2%;
+    --chat-user-bubble: 217.2 91.2% 59.8%;
+    --chat-user-bubble-foreground: 0 0% 100%;
+    --chat-bot-bubble: 0 0% 100%;
+    --chat-bot-bubble-foreground: 222.2 84% 4.9%;
+    --chat-input-bg: 0 0% 100%;
+    --chat-input-border: 214.3 31.8% 91.4%;
+    --chat-hover: 210 40% 94%;
+    
+    /* Gradients */
+    --gradient-chat: linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(224.3 76.3% 48%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 40% 98%));
+    
+    /* Shadows */
+    --shadow-chat: 0 4px 20px -4px hsl(217.2 91.2% 59.8% / 0.15);
+    --shadow-message: 0 1px 3px hsl(222.2 84% 4.9% / 0.1);
+    --shadow-elegant: 0 10px 30px -10px hsl(217.2 91.2% 59.8% / 0.2);
   }
 
   .dark {
@@ -91,6 +113,28 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Chat-specific design tokens - Dark mode */
+    --chat-primary: 217.2 91.2% 59.8%;
+    --chat-primary-foreground: 0 0% 100%;
+    --chat-secondary: 217.2 32.6% 17.5%;
+    --chat-secondary-foreground: 210 40% 98%;
+    --chat-user-bubble: 217.2 91.2% 59.8%;
+    --chat-user-bubble-foreground: 0 0% 100%;
+    --chat-bot-bubble: 217.2 32.6% 17.5%;
+    --chat-bot-bubble-foreground: 210 40% 98%;
+    --chat-input-bg: 217.2 32.6% 17.5%;
+    --chat-input-border: 217.2 32.6% 25%;
+    --chat-hover: 217.2 32.6% 20%;
+    
+    /* Gradients - Dark mode */
+    --gradient-chat: linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(224.3 76.3% 48%));
+    --gradient-subtle: linear-gradient(180deg, hsl(222.2 84% 4.9%), hsl(217.2 32.6% 17.5%));
+    
+    /* Shadows - Dark mode */
+    --shadow-chat: 0 4px 20px -4px hsl(217.2 91.2% 59.8% / 0.3);
+    --shadow-message: 0 1px 3px hsl(0 0% 0% / 0.2);
+    --shadow-elegant: 0 10px 30px -10px hsl(217.2 91.2% 59.8% / 0.4);
   }
 }
 
