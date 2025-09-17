@@ -2,7 +2,7 @@
 export default {
   // Build configuration (runs in the frontend workspace)
   build: {
-    command: 'npm --prefix frontend run build:lovable',
+    command: 'sh -c "npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run build:lovable"',
     directory: 'frontend/dist',
     environment: {
       NODE_VERSION: '18',
