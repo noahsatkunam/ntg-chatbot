@@ -2,7 +2,7 @@
 export default {
   // Build configuration (runs in the frontend workspace)
   build: {
-    command: 'npm run -w frontend build:lovable',
+    command: 'npm --prefix frontend run build:lovable',
     directory: 'frontend/dist',
     environment: {
       NODE_VERSION: '18',
@@ -13,7 +13,7 @@ export default {
 
   // Development configuration (use Vite dev server from frontend)
   dev: {
-    command: 'npm run -w frontend dev',
+    command: 'npm --prefix frontend run dev',
     port: 5173
   },
 

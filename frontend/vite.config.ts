@@ -9,7 +9,7 @@ export default defineConfig(({ command, mode }) => {
   
   return {
     server: {
-      host: "::",
+      host: true,
       port: parseInt(env.VITE_PORT) || 5173,
     },
   plugins: [
