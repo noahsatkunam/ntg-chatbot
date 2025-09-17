@@ -10,6 +10,7 @@ export interface ApiResponse<T = any> {
 export interface User {
   id: string;
   email: string;
+  name: string;
   firstName: string;
   lastName: string;
   role: 'admin' | 'user' | 'tenant_admin';
@@ -50,6 +51,7 @@ export interface Tenant {
   id: string;
   name: string;
   domain: string;
+  plan: string;
   settings: TenantSettings;
   createdAt: string;
   updatedAt: string;
@@ -213,4 +215,47 @@ export interface ChatAnalytics {
     conversations: number;
     messages: number;
   }>;
+}
+
+// Additional Types for Components
+export interface Message {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant' | 'system';
+  timestamp: string;
+  conversationId?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  status: 'active' | 'inactive' | 'draft';
+  tenantId: string;
+  config: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  template: Record<string, any>;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  input: Record<string, any>;
+  output?: Record<string, any>;
+  error?: string;
+  startedAt: string;
+  completedAt?: string;
 }

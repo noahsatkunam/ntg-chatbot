@@ -17,6 +17,7 @@
     "n8n:start": "n8n start --env-file=.env.n8n",
     "n8n:setup": "mkdir -p .n8n && n8n import:workflow --input=.n8n/workflows --env-file=.env.n8n",
     "build": "npm run build:backend && npm run build:frontend",
+    "build:dev": "cd frontend && npm run build:dev",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "start": "npm run start:backend",

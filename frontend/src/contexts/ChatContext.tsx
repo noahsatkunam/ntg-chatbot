@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Conversation, ChatMessage, WebSocketMessage, TypingIndicator } from '../types/api';
+import { Conversation, ChatMessage, WebSocketMessage, TypingIndicator, Message } from '../types/api';
 import { chatApi } from '../lib/api/chat';
 import webSocketManager from '../lib/websocket';
 import { useAuth } from './AuthContext';
@@ -7,8 +7,10 @@ import { useAuth } from './AuthContext';
 interface ChatContextType {
   conversations: Conversation[];
   currentConversation: Conversation | null;
+  messages: Message[];
   isLoading: boolean;
   isTyping: boolean;
+  isStreaming: boolean;
   typingUsers: string[];
   isConnected: boolean;
   
@@ -21,6 +23,7 @@ interface ChatContextType {
   // Message management
   sendMessage: (message: string, conversationId?: string) => Promise<void>;
   streamMessage: (message: string, conversationId?: string) => Promise<void>;
+  sendStreamingMessage: (message: any) => void;
   regenerateResponse: (conversationId: string) => Promise<void>;
   deleteMessage: (conversationId: string, messageId: string) => Promise<void>;
   
@@ -47,6 +50,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Initialize WebSocket connections and load conversations
   useEffect(() => {
@@ -394,6 +398,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   };
 
+  const sendStreamingMessage = (message: any) => {
+    if (currentConversation) {
+      webSocketManager.sendMessage(currentConversation.id, message);
+    }
+  };
+
   const refreshConversations = async () => {
     await loadConversations();
   };
@@ -420,8 +430,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }
       ] : currentConversation.messages,
     } : null,
+    messages: currentConversation?.messages.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      role: msg.role,
+      timestamp: msg.createdAt,
+      conversationId: msg.conversationId,
+      metadata: msg.metadata
+    })) || [],
     isLoading,
     isTyping: isTyping || streamingMessage.length > 0,
+    isStreaming: streamingMessage.length > 0,
     typingUsers,
     isConnected,
     
@@ -432,6 +451,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     
     sendMessage,
     streamMessage,
+    sendStreamingMessage,
     regenerateResponse,
     deleteMessage,
     
