@@ -25,7 +25,6 @@ import { Button } from '@/components/ui/button';
 const menuItems = [
   { title: "New Chat", icon: Plus, url: "/chat/new" },
   { title: "Chat History", icon: History, url: "/chat/history" },
-  { title: "Analytics", icon: BarChart3, url: "/analytics" },
   { title: "Settings", icon: Settings, url: "/settings" },
 ];
 
@@ -34,7 +33,11 @@ const adminItems = [
   { title: "Bot Management", icon: Bot, url: "/admin/bots" },
 ];
 
-export const ChatSidebar = () => {
+interface ChatSidebarProps {
+  onShowAnalytics?: () => void;
+}
+
+export const ChatSidebar = ({ onShowAnalytics }: ChatSidebarProps) => {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -58,13 +61,23 @@ export const ChatSidebar = () => {
       </div>
 
       <SidebarContent className="p-2">
-        <div className="mb-4">
+        <div className="mb-4 space-y-2">
           <Button 
             className={`w-full ${isCollapsed ? 'px-2' : 'px-4'} bg-gradient-chat hover:opacity-90 shadow-chat`}
             size={isCollapsed ? "icon" : "default"}
           >
             <Plus className="w-4 h-4" />
             {!isCollapsed && <span className="ml-2">New Chat</span>}
+          </Button>
+          
+          <Button 
+            variant="outline"
+            className={`w-full ${isCollapsed ? 'px-2' : 'px-4'} border-analytics-primary/20 hover:bg-analytics-primary/10`}
+            size={isCollapsed ? "icon" : "default"}
+            onClick={onShowAnalytics}
+          >
+            <BarChart3 className="w-4 h-4 text-analytics-primary" />
+            {!isCollapsed && <span className="ml-2 text-analytics-primary">Analytics</span>}
           </Button>
         </div>
 

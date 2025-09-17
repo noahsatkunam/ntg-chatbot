@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.ai-chat-with-sources]
 verify_jwt = true
+
+[functions.analytics-data]
+verify_jwt = true
