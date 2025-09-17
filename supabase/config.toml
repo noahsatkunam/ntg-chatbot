@@ -2,3 +2,9 @@ project_id = "hhpephxkmpngurlnhukp"
 
 [functions.realtime-chat]
 verify_jwt = false
+
+[functions.knowledge-search]
+verify_jwt = true
+
+[functions.ai-chat-with-sources]
+verify_jwt = true

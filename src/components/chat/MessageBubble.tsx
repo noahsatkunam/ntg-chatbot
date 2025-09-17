@@ -11,6 +11,7 @@ import { Message, MessageReaction } from './types';
 import { MessageReactions } from './MessageReactions';
 import { MessageStatus } from './MessageStatus';
 import { CodeBlock } from './CodeBlock';
+import { SourceCitation } from './SourceCitation';
 
 interface MessageBubbleProps {
   message: Message;
@@ -171,6 +172,16 @@ export const MessageBubble = ({
               </div>
             ))}
           </div>
+        )}
+
+        {/* Source Citations */}
+        {message.role === 'assistant' && (message.sources || message.responseType) && (
+          <SourceCitation
+            sources={message.sources || []}
+            relatedDocuments={message.relatedDocuments || []}
+            confidenceLevel={message.confidenceLevel || 'low'}
+            responseType={message.responseType || 'general'}
+          />
         )}
 
         {/* Reactions */}

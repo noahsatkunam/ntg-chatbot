@@ -8,6 +8,28 @@ export interface Message {
   replyTo?: string; // ID of the message being replied to
   status?: MessageStatus;
   isEdited?: boolean;
+  sources?: Source[];
+  relatedDocuments?: RelatedDocument[];
+  confidenceLevel?: 'high' | 'medium' | 'low';
+  responseType?: 'knowledge_based' | 'general';
+}
+
+export interface Source {
+  id: string;
+  document_id: string;
+  document_title: string;
+  document_file_name: string;
+  citation_text: string;
+  relevance_score: number;
+  confidence_level: 'high' | 'medium' | 'low';
+}
+
+export interface RelatedDocument {
+  id: string;
+  title: string;
+  description?: string;
+  file_name: string;
+  created_at: string;
 }
 
 export interface MessageReaction {
