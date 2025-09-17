@@ -10,14 +10,33 @@ export interface ApiResponse<T = any> {
 export interface User {
   id: string;
   email: string;
+  name?: string;
   firstName: string;
   lastName: string;
   role: 'admin' | 'user' | 'tenant_admin';
   tenantId: string;
   isEmailVerified: boolean;
   twoFactorEnabled: boolean;
+  permissions: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  attachments?: any[];
+  sources?: any[];
+  responseType?: string;
+  confidenceLevel?: string;
+  relatedDocuments?: any[];
+  reactions?: any[];
+  status?: string;
+  isEdited?: boolean;
+  timestamp: Date;
+  replyTo?: string;
 }
 
 export interface AuthTokens {
@@ -49,6 +68,7 @@ export interface AuthResponse {
 export interface Tenant {
   id: string;
   name: string;
+  plan: string;
   domain: string;
   settings: TenantSettings;
   createdAt: string;
@@ -59,6 +79,7 @@ export interface TenantSettings {
   allowRegistration: boolean;
   maxUsers: number;
   features: string[];
+  streaming?: boolean;
   branding?: {
     logo?: string;
     primaryColor?: string;
@@ -66,12 +87,41 @@ export interface TenantSettings {
   };
 }
 
-// Chat Types
+// Workflow Types  
+export interface Workflow {
+  id: string;
+  name: string;
+  description?: string;
+  status?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  input?: Record<string, any>;
+  output?: Record<string, any>;
+  items?: any[];
+  createdAt: string;
+  completedAt?: string;
+}
+
+// ... keep existing code (Chat Types)
 export interface ChatMessage {
   id: string;
   conversationId: string;
   content: string;
   role: 'user' | 'assistant' | 'system';
+  tenantId?: string;
   metadata?: {
     sources?: string[];
     confidence?: number;

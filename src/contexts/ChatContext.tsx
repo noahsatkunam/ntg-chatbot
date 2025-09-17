@@ -7,8 +7,10 @@ import { useAuth } from './AuthContext';
 interface ChatContextType {
   conversations: Conversation[];
   currentConversation: Conversation | null;
+  messages: ChatMessage[];
   isLoading: boolean;
   isTyping: boolean;
+  isStreaming: boolean;
   typingUsers: string[];
   isConnected: boolean;
   
@@ -20,6 +22,7 @@ interface ChatContextType {
   
   // Message management
   sendMessage: (message: string, conversationId?: string) => Promise<void>;
+  sendStreamingMessage: (conversationId: string, messageData: any) => Promise<void>;
   streamMessage: (message: string, conversationId?: string) => Promise<void>;
   regenerateResponse: (conversationId: string) => Promise<void>;
   deleteMessage: (conversationId: string, messageId: string) => Promise<void>;
@@ -420,8 +423,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }
       ] : currentConversation.messages,
     } : null,
+    messages: currentConversation?.messages || [],
     isLoading,
     isTyping: isTyping || streamingMessage.length > 0,
+    isStreaming: streamingMessage.length > 0,
     typingUsers,
     isConnected,
     
@@ -431,6 +436,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     deleteConversation,
     
     sendMessage,
+    sendStreamingMessage: streamMessage,
     streamMessage,
     regenerateResponse,
     deleteMessage,
