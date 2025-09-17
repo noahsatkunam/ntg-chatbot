@@ -1,0 +1,210 @@
+// Backup of current schema before fixing
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  TENANT_USER
+  END_USER
+}
+
+enum TokenType {
+  REFRESH
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum TenantPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PresenceStatus {
+  ONLINE
+  OFFLINE
+  AWAY
+  BUSY
+}
+
+model Tenant {
+  id                String          @id @default(uuid())
+  name              String
+  slug              String          @unique
+  subdomain         String          @unique
+  customDomain      String?         @unique
+  status            TenantStatus    @default(TRIAL)
+  plan              TenantPlan      @default(FREE)
+  trialEndsAt       DateTime?
+  suspendedAt       DateTime?
+  suspendReason     String?
+  
+  // Branding & Customization
+  logo              String?
+  primaryColor      String          @default("#3B82F6")
+  secondaryColor    String          @default("#10B981")
+  favicon           String?
+  
+  // Settings & Limits
+  settings          Json            @default("{}")
+  features          Json            @default("{}")
+  limits            Json            @default("{}")
+  
+  // Contact Information
+  contactEmail      String?
+  contactPhone      String?
+  billingEmail      String?
+  
+  // Metadata
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  // Relations
+  users             User[]
+  knowledgeDocuments KnowledgeDocument[]
+  knowledgeCollection KnowledgeCollection?
+  
+  @@index([slug])
+  @@index([subdomain])
+  @@index([status])
+  @@map("tenants")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String
+  password              String
+  firstName             String?
+  lastName              String?
+  avatar                String?
+  role                  Role      @default(END_USER)
+  isActive              Boolean   @default(true)
+  emailVerified         Boolean   @default(false)
+  emailVerifiedAt       DateTime?
+  twoFactorEnabled      Boolean   @default(false)
+  twoFactorSecret       String?
+  lastLoginAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenantId              String?
+
+  // Relations
+  tenant                Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  knowledgeDocuments    KnowledgeDocument[]
+
+  @@unique([email, tenantId])
+  @@index([email])
+  @@index([tenantId])
+  @@index([role])
+  @@map("users")
+}
+
+// Knowledge Base Models
+model KnowledgeDocument {
+  id             String   @id @default(cuid())
+  tenantId       String
+  filename       String
+  originalName   String
+  fileSize       Int
+  mimeType       String
+  status         DocumentStatus @default(PROCESSING)
+  processingProgress Int @default(0)
+  metadata       Json?
+  uploadedBy     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  processedAt    DateTime?
+  errorMessage   String?
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader  User             @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  chunks    DocumentChunk[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([uploadedBy])
+  @@index([createdAt])
+  @@map("knowledge_documents")
+}
+
+model DocumentChunk {
+  id             String   @id @default(cuid())
+  documentId     String
+  tenantId       String
+  content        String   @db.Text
+  chunkIndex     Int
+  startOffset    Int
+  endOffset      Int
+  tokenCount     Int
+  embeddingId    String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([tenantId])
+  @@index([documentId])
+  @@index([embeddingId])
+  @@map("document_chunks")
+}
+
+model KnowledgeCollection {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  collectionName String
+  vectorDimension Int     @default(1536)
+  distanceMetric String  @default("cosine")
+  settings       Json?
+  documentCount  Int     @default(0)
+  totalChunks    Int     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([collectionName])
+  @@map("knowledge_collections")
+}
+
+model EmbeddingCache {
+  id           String   @id @default(cuid())
+  textHash     String   @unique
+  model        String
+  embedding    Json     // Store as JSON array
+  tokenCount   Int
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  @@index([textHash])
+  @@index([model])
+  @@index([lastUsedAt])
+  @@map("embedding_cache")
+}

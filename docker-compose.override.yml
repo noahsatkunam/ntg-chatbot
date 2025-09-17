@@ -1,0 +1,51 @@
+# Docker Compose Override for Development
+# This file is automatically loaded by docker-compose and overrides settings for development
+
+version: '3.8'
+
+services:
+  frontend:
+    stdin_open: true
+    tty: true
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - NODE_OPTIONS=--max-old-space-size=2048
+
+  backend:
+    stdin_open: true
+    tty: true
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=1024
+      - DEBUG=express:*
+
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_MULTIPLE_DATABASES=chatbot_platform,n8n,qdrant_meta
+
+  # Additional development tools
+  adminer:
+    image: adminer:latest
+    container_name: chatbot-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+      - ADMINER_DESIGN=pepa-linha-dark
+    depends_on:
+      - postgres
+    networks:
+      - chatbot-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: chatbot-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - chatbot-network

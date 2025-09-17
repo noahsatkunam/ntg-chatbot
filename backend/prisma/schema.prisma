@@ -1,0 +1,1077 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  TENANT_USER
+  END_USER
+}
+
+enum TokenType {
+  REFRESH
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum TenantPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PresenceStatus {
+  ONLINE
+  OFFLINE
+  AWAY
+  BUSY
+}
+
+model Tenant {
+  id                String          @id @default(uuid())
+  name              String
+  slug              String          @unique
+  status            TenantStatus    @default(TRIAL)
+  settings          Json            @default("{}")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  // Relations
+  users             User[]
+  knowledgeDocuments KnowledgeDocument[]
+  knowledgeCollection KnowledgeCollection?
+  retrievalLogs     RetrievalLog[]
+  conversations     Conversation[]
+  processingJobs    ProcessingJob[]
+  searchAnalytics   SearchAnalytics[]
+  kbSettings        KnowledgeBaseSettings?
+  ragQueries        RagQuery[]
+  knowledgeFeedback KnowledgeFeedback[]
+  retrievalAnalytics RetrievalAnalytics[]
+  workflows         Workflow[]
+  workflowExecutions WorkflowExecution[]
+  workflowCredentials WorkflowCredential[]
+  workflowAnalytics WorkflowAnalytics[]
+  workflowPermissions WorkflowPermission[]
+  workflowConfirmations WorkflowConfirmation[]
+  apiConnections    ApiConnection[]
+  oauth2Providers   OAuth2Provider[]
+  oauth2Connections OAuth2Connection[]
+  triggerLogs       TriggerLog[]
+  apiRequestLogs    ApiRequestLog[]
+  intentModels      IntentModel[]
+  workflowChains    WorkflowChain[]
+  conditionalRules  ConditionalRule[]
+  jobQueues         JobQueue[]
+  
+  @@index([slug])
+  @@index([status])
+  @@map("tenants")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String
+  password              String
+  firstName             String?
+  lastName              String?
+  fullName              String?
+  avatar                String?
+  avatarUrl             String?
+  role                  Role      @default(END_USER)
+  isActive              Boolean   @default(true)
+  emailVerified         Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenantId              String?
+
+  // Relations
+  tenant                Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  knowledgeDocuments    KnowledgeDocument[]
+  retrievalLogs         RetrievalLog[]
+  participations        ConversationParticipant[]
+  messages              Message[]
+  reactions             MessageReaction[]
+  processingJobs        ProcessingJob[]
+  searchAnalytics       SearchAnalytics[]
+  documentVersions      DocumentVersion[]
+  ragQueries            RagQuery[]
+  knowledgeFeedback     KnowledgeFeedback[]
+  workflows             Workflow[]
+  workflowCredentials   WorkflowCredential[]
+  workflowPermissions   WorkflowPermission[]
+  workflowConfirmations WorkflowConfirmation[]
+  workflowTemplates     WorkflowTemplate[]
+  oauth2Connections     OAuth2Connection[]
+  triggerLogs           TriggerLog[]
+  apiRequestLogs        ApiRequestLog[]
+  intentModels          IntentModel[]
+  workflowChains        WorkflowChain[]
+  conditionalRules      ConditionalRule[]
+  jobQueues             JobQueue[]
+
+  @@unique([email, tenantId])
+  @@index([email])
+  @@index([tenantId])
+  @@index([role])
+  @@map("users")
+}
+
+// Knowledge Base Models
+model KnowledgeDocument {
+  id             String   @id @default(cuid())
+  tenantId       String
+  filename       String
+  originalName   String
+  fileSize       Int
+  mimeType       String
+  status         DocumentStatus @default(PROCESSING)
+  processingProgress Int @default(0)
+  metadata       Json?
+  uploadedBy     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  processedAt    DateTime?
+  errorMessage   String?
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader  User             @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  chunks    DocumentChunk[]
+  versions  DocumentVersion[]
+  citations SourceCitation[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([uploadedBy])
+  @@index([createdAt])
+  @@map("knowledge_documents")
+}
+
+model DocumentChunk {
+  id             String   @id @default(cuid())
+  documentId     String
+  tenantId       String
+  content        String   @db.Text
+  chunkIndex     Int
+  startOffset    Int
+  endOffset      Int
+  tokenCount     Int
+  embeddingId    String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([tenantId])
+  @@index([documentId])
+  @@index([embeddingId])
+  @@map("document_chunks")
+}
+
+model KnowledgeCollection {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  collectionName String
+  vectorDimension Int     @default(1536)
+  distanceMetric String  @default("cosine")
+  settings       Json?
+  documentCount  Int     @default(0)
+  totalChunks    Int     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([collectionName])
+  @@map("knowledge_collections")
+}
+
+model EmbeddingCache {
+  id           String   @id @default(cuid())
+  textHash     String   @unique
+  model        String
+  embedding    Json     // Store as JSON array
+  tokenCount   Int
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  @@index([textHash])
+  @@index([model])
+  @@index([lastUsedAt])
+  @@map("embedding_cache")
+}
+
+model RetrievalLog {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String?
+  query         String   @db.Text
+  queryType     String   @default("semantic")
+  resultsCount  Int
+  responseTime  Int      // milliseconds
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([queryType])
+  @@index([createdAt])
+  @@map("retrieval_logs")
+}
+
+// Enhanced Knowledge Base Models
+model ProcessingJob {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String
+  jobType       String   // "document_upload", "batch_process", "reprocess"
+  status        String   @default("pending") // "pending", "processing", "completed", "failed"
+  progress      Int      @default(0) // 0-100
+  totalItems    Int      @default(1)
+  processedItems Int     @default(0)
+  errorMessage  String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  completedAt   DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("processing_jobs")
+}
+
+model DocumentVersion {
+  id           String   @id @default(cuid())
+  documentId   String
+  version      Int
+  filename     String
+  fileSize     Int
+  contentHash  String
+  changes      String?  @db.Text
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  createdBy    String
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator  User              @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("document_versions")
+}
+
+model SearchAnalytics {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String?
+  query         String   @db.Text
+  queryHash     String
+  resultsCount  Int
+  clickthrough  Int      @default(0)
+  responseTime  Int
+  searchType    String   @default("semantic")
+  filters       Json?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([queryHash])
+  @@index([createdAt])
+  @@map("search_analytics")
+}
+
+model KnowledgeBaseSettings {
+  id                String   @id @default(cuid())
+  tenantId          String   @unique
+  chunkingStrategy  String   @default("semantic") // "semantic", "hierarchical", "overlapping"
+  chunkSize         Int      @default(1000)
+  chunkOverlap      Int      @default(200)
+  searchConfig      Json     @default("{}")
+  processingConfig  Json     @default("{}")
+  indexingConfig    Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("kb_settings")
+}
+
+// Core Chat Models
+model Conversation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  title       String?
+  isGroup     Boolean  @default(false)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages     Message[]
+  participants ConversationParticipant[]
+  ragQueries   RagQuery[]
+  settings     ConversationSettings?
+
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  tenantId       String
+  role           String   @default("member")
+  joinedAt       DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@index([tenantId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  tenantId       String
+  content        String   @db.Text
+  type           String   @default("text")
+  metadata       Json?
+  deleted        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions    MessageReaction[]
+  citations    SourceCitation[]
+  feedback     KnowledgeFeedback[]
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  tenantId  String
+  reaction  String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, reaction])
+  @@index([messageId])
+  @@index([userId])
+  @@index([tenantId])
+  @@map("message_reactions")
+}
+
+// RAG Analytics Models
+model RagQuery {
+  id                String   @id @default(cuid())
+  tenantId          String
+  userId            String?
+  conversationId    String?
+  query             String   @db.Text
+  queryHash         String
+  sourcesUsed       Int      @default(0)
+  confidence        Float    @default(0.0)
+  retrievalStrategy String   @default("hybrid")
+  queryExpansions   Json?
+  responseTime      Int      // milliseconds
+  feedback          String?  // "helpful", "not_helpful", "partially_helpful"
+  feedbackComment   String?
+  createdAt         DateTime @default(now())
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  conversation Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  citations    SourceCitation[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([conversationId])
+  @@index([queryHash])
+  @@index([createdAt])
+  @@index([confidence])
+  @@map("rag_queries")
+}
+
+model SourceCitation {
+  id             String   @id @default(cuid())
+  ragQueryId     String
+  messageId      String?
+  documentId     String
+  tenantId       String
+  relevanceScore Float
+  citationNumber Int
+  usageCount     Int      @default(1)
+  excerpt        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  ragQuery RagQuery            @relation(fields: [ragQueryId], references: [id], onDelete: Cascade)
+  message  Message?            @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  document KnowledgeDocument   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([ragQueryId])
+  @@index([messageId])
+  @@index([documentId])
+  @@index([tenantId])
+  @@index([relevanceScore])
+  @@map("source_citations")
+}
+
+model KnowledgeFeedback {
+  id             String   @id @default(cuid())
+  tenantId       String
+  userId         String
+  messageId      String?
+  ragQueryId     String?
+  rating         Int      // 1-5 scale
+  feedbackType   String   // "accuracy", "completeness", "relevance", "overall"
+  comments       String?  @db.Text
+  suggestions    Json?    // Array of improvement suggestions
+  createdAt      DateTime @default(now())
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message  Message?  @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  ragQuery RagQuery? @relation(fields: [ragQueryId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([messageId])
+  @@index([ragQueryId])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("knowledge_feedback")
+}
+
+model RetrievalAnalytics {
+  id              String   @id @default(cuid())
+  tenantId        String
+  date            DateTime @db.Date
+  queryCount      Int      @default(0)
+  successRate     Float    @default(0.0)
+  averageConfidence Float  @default(0.0)
+  topQueries      Json?    // Array of most common queries
+  topSources      Json?    // Array of most cited sources
+  performanceMetrics Json? // Response times, cache hits, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@index([tenantId])
+  @@index([date])
+  @@map("retrieval_analytics")
+}
+
+model ConversationSettings {
+  id             String   @id @default(cuid())
+  conversationId String   @unique
+  tenantId       String
+  ragMode        String   @default("hybrid") // "knowledge_only", "hybrid", "general"
+  maxSources     Int      @default(5)
+  confidenceThreshold Float @default(0.3)
+  citationStyle  String   @default("numbered") // "numbered", "inline", "footnote"
+  includeConfidence Boolean @default(true)
+  autoSuggestQuestions Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([tenantId])
+  @@map("conversation_settings")
+}
+
+// Workflow Automation Models
+model Workflow {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?  @db.Text
+  definition  Json     // n8n workflow definition
+  status      String   @default("draft") // "draft", "active", "inactive", "error"
+  version     Int      @default(1)
+  n8nId       String?  // n8n workflow ID
+  category    String   @default("general")
+  tags        Json?    // Array of tags
+  isTemplate  Boolean  @default(false)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastExecuted DateTime?
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator    User                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  executions WorkflowExecution[]
+  triggers   WorkflowTrigger[]
+  permissions WorkflowPermission[]
+  confirmations WorkflowConfirmation[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([createdBy])
+  @@index([category])
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id           String   @id @default(cuid())
+  workflowId   String
+  tenantId     String
+  n8nExecutionId String?
+  status       String   @default("running") // "running", "success", "error", "cancelled", "waiting"
+  startTime    DateTime @default(now())
+  endTime      DateTime?
+  duration     Int?     // milliseconds
+  triggerData  Json?    // Input data that triggered execution
+  resultData   Json?    // Output data from execution
+  errorMessage String?  @db.Text
+  logs         Json?    // Execution logs
+  triggeredBy  String?  // userId or "system" or "webhook"
+  metadata     Json?    // Additional execution metadata
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([startTime])
+  @@map("workflow_executions")
+}
+
+model WorkflowTrigger {
+  id            String   @id @default(cuid())
+  workflowId    String
+  tenantId      String
+  triggerType   String   // "webhook", "schedule", "chat_message", "document_upload", "manual"
+  configuration Json     // Trigger-specific configuration
+  isActive      Boolean  @default(true)
+  webhookPath   String?  // Unique webhook path for this trigger
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([tenantId])
+  @@index([triggerType])
+  @@index([webhookPath])
+  @@map("workflow_triggers")
+}
+
+model WorkflowCredential {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  name                String
+  service             String   // "openai", "slack", "gmail", "sheets", etc.
+  encryptedCredentials String  @db.Text // Encrypted credential data
+  isActive            Boolean  @default(true)
+  createdBy           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  lastUsed            DateTime?
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([service])
+  @@map("workflow_credentials")
+}
+
+model WorkflowPermission {
+  id         String   @id @default(cuid())
+  tenantId   String
+  workflowId String
+  userId     String?
+  role       Role?
+  canView    Boolean  @default(false)
+  canExecute Boolean  @default(false)
+  canCancel  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([workflowId])
+  @@index([userId])
+  @@index([role])
+  @@map("workflow_permissions")
+}
+
+model WorkflowConfirmation {
+  id         String   @id
+  tenantId   String
+  workflowId String
+  userId     String
+  requestData Json
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([workflowId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("workflow_confirmations")
+}
+
+model WorkflowTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  category    String
+  definition  Json     // n8n workflow template definition
+  tags        Json?    // Array of tags
+  isPublic    Boolean  @default(false)
+  usageCount  Int      @default(0)
+  rating      Float    @default(0.0)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([isPublic])
+  @@index([rating])
+  @@map("workflow_templates")
+}
+
+model WorkflowAnalytics {
+  id              String   @id @default(cuid())
+  tenantId        String
+  date            DateTime @db.Date
+  totalExecutions Int      @default(0)
+  successfulExecutions Int @default(0)
+  failedExecutions Int     @default(0)
+  averageDuration Float    @default(0.0)
+  totalDuration   Int      @default(0) // milliseconds
+  uniqueWorkflows Int      @default(0)
+  topWorkflows    Json?    // Array of most executed workflows
+  errorSummary    Json?    // Common error types and counts
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@index([tenantId])
+  @@index([date])
+  @@map("workflow_analytics")
+}
+
+// Integration Models
+model ApiConnection {
+  id             String   @id @default(cuid())
+  tenantId       String
+  name           String
+  type           String   // "rest", "graphql", "soap", "webhook"
+  baseUrl        String
+  authentication Json?    // Authentication configuration
+  headers        Json?    // Default headers
+  metadata       Json?    // Additional connection metadata
+  isActive       Boolean  @default(true)
+  rateLimit      Json?    // Rate limiting configuration
+  retryConfig    Json?    // Retry configuration
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastUsed       DateTime?
+
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestLogs    ApiRequestLog[]
+  oauth2Connections OAuth2Connection[]
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([isActive])
+  @@map("api_connections")
+}
+
+model OAuth2Provider {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String   // "google", "microsoft", "slack", etc.
+  clientId     String
+  clientSecret String   @db.Text // Encrypted
+  authUrl      String
+  tokenUrl     String
+  scopes       Json?    // Array of scopes
+  redirectUri  String
+  metadata     Json?    // Provider-specific configuration
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connections OAuth2Connection[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([name])
+  @@map("oauth2_providers")
+}
+
+model OAuth2Connection {
+  id            String   @id @default(cuid())
+  providerId    String
+  connectionId  String?  // Optional link to ApiConnection
+  userId        String
+  tenantId      String
+  accessToken   String   @db.Text // Encrypted
+  refreshToken  String?  @db.Text // Encrypted
+  tokenType     String   @default("Bearer")
+  expiresAt     DateTime?
+  scopes        Json?    // Granted scopes
+  userInfo      Json?    // User information from provider
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastUsed      DateTime?
+
+  provider   OAuth2Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  connection ApiConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, userId])
+  @@index([providerId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@map("oauth2_connections")
+}
+
+model TriggerLog {
+  id             String   @id @default(cuid())
+  tenantId       String
+  userId         String?
+  workflowId     String?
+  triggerType    String   // "keyword", "pattern", "intent", "command"
+  triggerData    Json     // Original trigger data
+  matchedRule    Json?    // Matched trigger rule
+  confidence     Float?   // Confidence score for AI-based triggers
+  executed       Boolean  @default(false)
+  executionId    String?  // Link to workflow execution
+  error          String?  @db.Text
+  processingTime Int?     // milliseconds
+  createdAt      DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([workflowId])
+  @@index([triggerType])
+  @@index([executed])
+  @@index([createdAt])
+  @@map("trigger_logs")
+}
+
+model ApiRequestLog {
+  id           String   @id @default(cuid())
+  connectionId String
+  tenantId     String
+  userId       String?
+  method       String   // "GET", "POST", etc.
+  endpoint     String
+  statusCode   Int?
+  duration     Int?     // milliseconds
+  requestSize  Int?     // bytes
+  responseSize Int?     // bytes
+  error        String?  @db.Text
+  metadata     Json?    // Additional request metadata
+  createdAt    DateTime @default(now())
+
+  connection ApiConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([connectionId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([statusCode])
+  @@index([createdAt])
+  @@map("api_request_logs")
+}
+
+model IntentModel {
+  id           String   @id @default(cuid())
+  tenantId     String
+  userId       String
+  name         String
+  version      String   @default("1.0")
+  modelData    Json     // Serialized model data
+  intents      Json     // Array of supported intents
+  entities     Json?    // Array of supported entities
+  trainingData Json?    // Training examples
+  accuracy     Float?   // Model accuracy score
+  isActive     Boolean  @default(true)
+  lastTrained  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isActive])
+  @@map("intent_models")
+}
+
+model WorkflowChain {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  name        String
+  description String?  @db.Text
+  steps       Json     // Array of workflow steps with conditions
+  isActive    Boolean  @default(true)
+  version     Int      @default(1)
+  metadata    Json?    // Additional chain metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastExecuted DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isActive])
+  @@map("workflow_chains")
+}
+
+model ConditionalRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  name        String
+  description String?  @db.Text
+  conditions  Json     // Array of conditions to evaluate
+  actions     Json     // Array of actions to execute
+  priority    Int      @default(0)
+  isActive    Boolean  @default(true)
+  category    String   @default("general")
+  metadata    Json?    // Additional rule metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastExecuted DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isActive])
+  @@index([priority])
+  @@index([category])
+  @@map("conditional_rules")
+}
+
+model JobQueue {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String?
+  queueName   String
+  jobId       String   @unique
+  jobType     String
+  jobData     Json
+  status      String   @default("pending") // "pending", "active", "completed", "failed", "delayed"
+  priority    Int      @default(0)
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  delay       Int?     // milliseconds
+  progress    Int      @default(0) // 0-100
+  result      Json?    // Job result data
+  error       String?  @db.Text
+  logs        Json?    // Job execution logs
+  scheduledFor DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([queueName])
+  @@index([status])
+  @@index([priority])
+  @@index([scheduledFor])
+  @@index([createdAt])
+  @@map("job_queues")
+}
+
+// Chat Integration Models
+model ConversationContext {
+  id             String   @id @default(cuid())
+  conversationId String
+  tenantId       String
+  key            String
+  value          Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, key])
+  @@index([conversationId])
+  @@index([tenantId])
+  @@map("conversation_contexts")
+}
+
+model UserContext {
+  id        String   @id @default(cuid())
+  userId    String
+  tenantId  String
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId, key])
+  @@index([tenantId])
+  @@map("user_contexts")
+}
+
+model WorkflowApprovalRequest {
+  id                 String   @id @default(cuid())
+  workflowId         String
+  executionId        String
+  tenantId           String
+  title              String
+  description        String?  @db.Text
+  approvers          String[]
+  requiredApprovals  Int      @default(1)
+  data               Json?
+  expiresAt          DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  responses WorkflowApprovalResponse[]
+
+  @@index([workflowId])
+  @@index([executionId])
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@map("workflow_approval_requests")
+}
+
+model WorkflowApprovalResponse {
+  id                  String   @id @default(cuid())
+  approvalRequestId   String
+  userId              String
+  approved            Boolean
+  comment             String?  @db.Text
+  respondedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
+
+  approvalRequest WorkflowApprovalRequest @relation(fields: [approvalRequestId], references: [id], onDelete: Cascade)
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([approvalRequestId, userId])
+  @@index([userId])
+  @@map("workflow_approval_responses")
+}
+
+model WorkflowInputRequest {
+  id             String   @id @default(cuid())
+  workflowId     String
+  executionId    String
+  tenantId       String
+  conversationId String?
+  stepId         String
+  type           String
+  prompt         String
+  options        String[]?
+  validation     Json?
+  required       Boolean  @default(true)
+  timeout        Int?
+  response       Json?
+  respondedBy    String?
+  respondedAt    DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  execution    WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  conversation Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  respondent   User?             @relation("WorkflowInputRequestRespondent", fields: [respondedBy], references: [id], onDelete: SetNull)
+
+  @@index([workflowId])
+  @@index([executionId])
+  @@index([tenantId])
+  @@index([conversationId])
+  @@index([respondedBy])
+  @@index([expiresAt])
+  @@map("workflow_input_requests")
+}

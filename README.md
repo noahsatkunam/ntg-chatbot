@@ -1,73 +1,169 @@
-# Welcome to your Lovable project
+# NTG Chatbot Platform
 
-## Project info
+A modern, full-stack multi-tenant chatbot platform built with React, TypeScript, Node.js, and comprehensive backend services.
 
-**URL**: https://lovable.dev/projects/8c26c6bb-88ab-4a8e-ba00-fb73f6df1c95
+## 🏗️ Architecture
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/8c26c6bb-88ab-4a8e-ba00-fb73f6df1c95) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+ntg-chatbot/
+├── frontend/           # Vite + React + TypeScript frontend
+├── backend/           # Express + TypeScript + Prisma backend
+├── docs/             # Documentation
+├── monitoring/       # Grafana & Prometheus configs
+├── scripts/          # Database and utility scripts
+├── supabase/         # Supabase migrations and functions
+└── archived-nextjs-frontend/  # Legacy Next.js frontend (archived)
 ```
 
-**Edit a file directly in GitHub**
+## 🚀 Quick Start
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
+- Node.js 18+ 
+- Docker & Docker Compose
+- PostgreSQL (or use Docker setup)
 
-**Use GitHub Codespaces**
+### Development Setup
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. **Clone and install dependencies:**
+```bash
+git clone <repository-url>
+cd ntg-chatbot
+npm run install:all
+```
 
-## What technologies are used for this project?
+2. **Environment setup:**
+```bash
+# Copy environment files
+cp .env.example .env
+cp frontend/.env.example frontend/.env
+cp backend/.env.example backend/.env
 
-This project is built with:
+# Update the .env files with your configuration
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. **Start development servers:**
+```bash
+# Start both frontend and backend concurrently
+npm run dev
 
-## How can I deploy this project?
+# Or start individually
+npm run dev:frontend  # Frontend on http://localhost:3000
+npm run dev:backend   # Backend on http://localhost:5000
+```
 
-Simply open [Lovable](https://lovable.dev/projects/8c26c6bb-88ab-4a8e-ba00-fb73f6df1c95) and click on Share -> Publish.
+### Docker Development
 
-## Can I connect a custom domain to my Lovable project?
+```bash
+# Start all services with Docker Compose
+npm run docker:dev
 
-Yes, you can!
+# Or manually
+docker-compose up --build
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📦 Available Scripts
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Root Level Commands
+- `npm run dev` - Start both frontend and backend in development mode
+- `npm run build` - Build both frontend and backend for production
+- `npm run start` - Start both services in production mode
+- `npm run lint` - Run linting on both frontend and backend
+- `npm run install:all` - Install dependencies for all packages
+- `npm run clean` - Clean all node_modules and build artifacts
+- `npm run docker:dev` - Start development environment with Docker
+- `npm run docker:prod` - Start production environment with Docker
+
+### Frontend Commands (in `/frontend`)
+- `npm run dev` - Start Vite development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run type-check` - Run TypeScript type checking
+
+### Backend Commands (in `/backend`)
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build TypeScript to JavaScript
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run test` - Run tests
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework:** React 18 with TypeScript
+- **Build Tool:** Vite
+- **UI Library:** Radix UI + shadcn/ui components
+- **Styling:** Tailwind CSS
+- **State Management:** Zustand + React Query
+- **Routing:** React Router
+- **Forms:** React Hook Form + Zod validation
+
+### Backend
+- **Runtime:** Node.js with TypeScript
+- **Framework:** Express.js
+- **Database:** PostgreSQL with Prisma ORM
+- **Authentication:** JWT + bcrypt
+- **Real-time:** Socket.io
+- **File Storage:** MinIO (S3-compatible)
+- **Vector Database:** Qdrant
+- **Caching:** Redis
+- **AI Integration:** OpenAI, Anthropic Claude
+- **Security:** Helmet, CORS, rate limiting
+
+### Infrastructure
+- **Containerization:** Docker & Docker Compose
+- **Monitoring:** Prometheus + Grafana
+- **Workflow Automation:** n8n
+- **Database:** PostgreSQL
+- **Message Queue:** Redis
+- **Reverse Proxy:** Nginx (production)
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Key environment variables to configure:
+
+**Frontend (.env in /frontend):**
+- `VITE_API_URL` - Backend API URL
+- `VITE_SUPABASE_URL` - Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key
+
+**Backend (.env in /backend):**
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - JWT signing secret (min 32 chars)
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `REDIS_URL` - Redis connection string
+
+**Docker (.env in root):**
+- All service ports and credentials for containerized deployment
+
+## 🚢 Deployment
+
+### Production Build
+```bash
+npm run build
+npm run start
+```
+
+### Docker Production
+```bash
+npm run docker:prod
+```
+
+## 📚 Documentation
+
+- [Manual Testing Guide](docs/MANUAL_TESTING_GUIDE.md)
+- [Docker Development Setup](docs/docker-development.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## 📄 License
+
+This project is proprietary. All rights reserved.

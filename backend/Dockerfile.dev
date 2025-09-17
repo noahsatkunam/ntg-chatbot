@@ -1,0 +1,22 @@
+# Development Dockerfile for Backend with Hot Reload
+FROM node:18-alpine
+
+# Install dependencies for building native modules
+RUN apk add --no-cache python3 make g++ curl
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm ci
+
+# Install tsx globally for TypeScript hot reload
+RUN npm install -g tsx
+
+# Expose port
+EXPOSE 5000
+
+# Start development server with hot reload
+CMD ["npm", "run", "dev"]
