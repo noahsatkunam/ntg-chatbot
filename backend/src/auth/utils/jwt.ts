@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { PrismaClient, TokenType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '../../utils/logger';
 import { getRedisClient } from '../../utils/redis';
 
@@ -9,7 +9,6 @@ const redisClient = getRedisClient();
 const prisma = new PrismaClient();
 
 // JWT Configuration
-const JWT_SECRET = process.env.JWT_SECRET || '';
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 const JWT_ISSUER = process.env.JWT_ISSUER || 'chatbot-platform';
@@ -17,16 +16,20 @@ const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'chatbot-platform-api';
 
 // Validate JWT secret at runtime
 function validateJwtSecret(): void {
-  if (!JWT_SECRET) {
+  const secret = process.env.JWT_SECRET || '';
+  if (!secret) {
     throw new Error('JWT_SECRET environment variable is required');
   }
-  if (JWT_SECRET.length < 32) {
+  if (secret.length < 32) {
     throw new Error('JWT_SECRET must be at least 32 characters long');
   }
 }
 
-// Call validation on first use
-validateJwtSecret();
+// Get JWT secret with validation
+function getJwtSecret(): string {
+  validateJwtSecret();
+  return process.env.JWT_SECRET || '';
+}
 
 export interface JWTPayload {
   sub: string; // user id
@@ -58,7 +61,7 @@ export interface DecodedToken extends JWTPayload {
  * Generate JWT access token
  */
 export function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp' | 'iss' | 'aud'>): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: JWT_ACCESS_EXPIRES_IN,
     issuer: JWT_ISSUER,
     audience: JWT_AUDIENCE,
@@ -70,7 +73,7 @@ export function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp' | 'i
  * Generate JWT refresh token
  */
 export function generateRefreshToken(payload: Omit<JWTPayload, 'iat' | 'exp' | 'iss' | 'aud'>): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
     issuer: JWT_ISSUER,
     audience: JWT_AUDIENCE,
@@ -104,7 +107,7 @@ export async function generateTokenPair(userId: string, email: string, role: str
     data: {
       userId,
       token: await hashToken(refreshToken),
-      type: TokenType.REFRESH,
+      type: 'REFRESH',
       expiresAt: refreshTokenExpiry,
     },
   });
@@ -129,7 +132,7 @@ export async function generateTokenPair(userId: string, email: string, role: str
  */
 export function verifyToken(token: string): DecodedToken {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, {
+    const decoded = jwt.verify(token, getJwtSecret(), {
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
       algorithms: ['HS256'],
@@ -171,7 +174,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenPai
     where: {
       userId: decoded.sub,
       token: hashedToken,
-      type: TokenType.REFRESH,
+      type: 'REFRESH',
       expiresAt: { gt: new Date() },
       usedAt: null,
     },
@@ -220,7 +223,7 @@ export async function blacklistToken(token: string, type: 'access' | 'refresh' =
     if (ttl <= 0) return; // Token already expired
     
     // Add to Redis blacklist
-    await redisClient.setex(
+    await redisClient.setEx(
       `blacklist:${type}:${token}`,
       ttl,
       '1'
@@ -232,7 +235,7 @@ export async function blacklistToken(token: string, type: 'access' | 'refresh' =
       await prisma.authToken.updateMany({
         where: {
           token: hashedToken,
-          type: TokenType.REFRESH,
+          type: 'REFRESH',
         },
         data: { usedAt: new Date() },
       });
@@ -269,7 +272,7 @@ export async function invalidateAllUserTokens(userId: string): Promise<void> {
     await prisma.authToken.updateMany({
       where: {
         userId,
-        type: TokenType.REFRESH,
+        type: 'REFRESH',
         usedAt: null,
       },
       data: { usedAt: new Date() },

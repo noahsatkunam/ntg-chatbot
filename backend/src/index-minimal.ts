@@ -11,18 +11,10 @@ import { securityHeaders } from './middlewares/security';
 import { logger } from './utils/logger';
 import { PrismaClient } from '@prisma/client';
 import { initializeRedis } from './utils/redis';
-import { startCSRFCleanup } from './middlewares/csrf';
 import { createServer } from 'http';
-import { WebSocketServer } from './websocket/websocketServer';
 import { initializeLocalDevelopment, isLocalDevelopment } from './config/localDevelopment.js';
 import path from 'path';
-import conversationsRoutes from './routes/conversations.routes';
-import aiRoutes from './ai/routes/aiRoutes';
-import fileRoutes from './files/routes/fileRoutes';
-import searchRoutes from './search/routes/searchRoutes';
-import advancedMessageRoutes from './chat/routes/advancedMessageRoutes';
-import healthRoutes from './routes/health.js';
-import ragRoutes from './knowledge/routes/ragRoutes';
+import healthRoutes from './routes/health';
 
 // Load environment variables
 dotenv.config();
@@ -33,10 +25,7 @@ const prisma = new PrismaClient();
 const app = express();
 const httpServer = createServer(app);
 
-// Initialize WebSocket server
-const wsServer = new WebSocketServer(httpServer);
-
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 
 // Security middlewares
 app.use(helmet({
@@ -53,17 +42,13 @@ app.use(helmet({
       frameSrc: ["'none'"],
     },
   },
-  crossOriginEmbedderPolicy: true,
-  crossOriginOpenerPolicy: true,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
   dnsPrefetchControl: true,
   frameguard: { action: 'deny' },
   hidePoweredBy: true,
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
+  hsts: false,
   ieNoOpen: true,
   noSniff: true,
   originAgentCluster: true,
@@ -73,13 +58,13 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   optionsSuccessStatus: 200,
 }));
 
 // Cookie parser
-app.use(cookieParser(process.env.COOKIE_SECRET));
+app.use(cookieParser());
 
 // Additional security headers
 app.use(securityHeaders);
@@ -100,20 +85,19 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Logging
 app.use(pinoHttp({ logger }));
 
-// Health routes
+// Health routes only
 app.use('/api', healthRoutes);
 
-// Register routes (minimal for startup)
-// app.use('/api/auth', authRoutes);
-// app.use('/api/chat', chatRoutes);
-// WebSocket routes are handled by the WebSocket server, not Express routes
-app.use('/api/ai', aiRoutes);
-app.use('/api/files', fileRoutes);
-app.use('/api/search', searchRoutes);
-app.use('/api/messages', advancedMessageRoutes);
-// app.use('/api/knowledge', knowledgeRoutes);
-app.use('/api/rag', ragRoutes);
-app.use('/api/conversations', conversationsRoutes);
+// Basic API info endpoint
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'NTG Chatbot Backend',
+    version: '1.0.0',
+    status: 'running',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // 404 handler
 app.use((req, res) => {
@@ -131,7 +115,6 @@ process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully');
   httpServer.close(() => {
     logger.info('HTTP server closed');
-    wsServer.stop();
     prisma.$disconnect();
     process.exit(0);
   });
@@ -141,7 +124,6 @@ process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully');
   httpServer.close(() => {
     logger.info('HTTP server closed');
-    wsServer.stop();
     prisma.$disconnect();
     process.exit(0);
   });
@@ -156,21 +138,26 @@ async function startServer() {
       logger.info('Local development environment initialized');
     }
 
-    // Initialize Redis (or mock service)
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    logger.info('Database connection successful');
+
+    // Initialize Redis (or mock service) only if not in local dev
     if (!isLocalDevelopment()) {
       await initializeRedis();
       logger.info('Redis initialized');
+    } else {
+      logger.info('Using mock Redis for local development');
     }
 
-    // Start CSRF token cleanup
-    startCSRFCleanup();
-
     // Start server
-    app.listen(PORT, () => {
-      logger.info(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+    httpServer.listen(PORT, () => {
+      logger.info(`🚀 Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
       if (isLocalDevelopment()) {
-        logger.info('Running in local development mode with mock services');
+        logger.info('🔧 Running in local development mode with mock services');
       }
+      logger.info(`📍 Health check: http://localhost:${PORT}/api/health`);
+      logger.info(`📍 API info: http://localhost:${PORT}/api`);
     });
   } catch (error) {
     logger.error('Failed to start server', { error });

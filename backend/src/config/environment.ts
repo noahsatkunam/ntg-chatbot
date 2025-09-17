@@ -1,14 +1,19 @@
-import { config } from 'dotenv';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+import path from 'path';
 
-// Load environment variables
-config();
+// Load environment variables from multiple locations
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '..', '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
+dotenv.config();
 
 // Environment validation schema
 const envSchema = z.object({
   // Server Configuration
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default(3001),
+  PORT: z.string().transform(Number).default("3001"),
   
   // Database Configuration
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
@@ -32,7 +37,7 @@ const envSchema = z.object({
   // AI API Configuration
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4'),
-  OPENAI_MAX_TOKENS: z.string().transform(Number).default(4000),
+  OPENAI_MAX_TOKENS: z.string().transform(Number).default("4000"),
   ANTHROPIC_API_KEY: z.string().optional(),
   
   // Supabase Configuration
@@ -46,11 +51,11 @@ const envSchema = z.object({
   
   // CORS and Security
   CORS_ORIGIN: z.string().default('http://localhost:5173,http://localhost:3000'),
-  RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default(900000),
-  RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default(100),
+  RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default("900000"),
+  RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default("100"),
   
   // File Upload
-  MAX_FILE_SIZE: z.string().transform(Number).default(52428800),
+  MAX_FILE_SIZE: z.string().transform(Number).default("52428800"),
   UPLOAD_PATH: z.string().default('./uploads'),
   ALLOWED_FILE_TYPES: z.string().default('.pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.gif'),
   
@@ -59,12 +64,12 @@ const envSchema = z.object({
   SMTP_PORT: z.string().transform(Number).optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  FROM_EMAIL: z.string().email().optional(),
+  FROM_EMAIL: z.string().optional(),
   FROM_NAME: z.string().optional(),
   
   // Logging and Monitoring
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
-  ENABLE_METRICS: z.string().transform(val => val === 'true').default(true),
+  ENABLE_METRICS: z.string().transform(val => val === 'true').default("true"),
   
   // Frontend URLs
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),

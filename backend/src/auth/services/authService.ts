@@ -1,4 +1,4 @@
-import { PrismaClient, User, TokenType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import speakeasy from 'speakeasy';
 import { logger } from '../../utils/logger';
@@ -15,7 +15,7 @@ import {
   blacklistToken,
   invalidateAllUserTokens,
   generateSecureToken
-} from '../utils/jwt';
+} from '../utils/jwt.js';
 import { emailService } from '../../services/email.service';
 
 const prisma = new PrismaClient();

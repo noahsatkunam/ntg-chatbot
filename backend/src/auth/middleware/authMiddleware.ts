@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaClient, User } from '@prisma/client';
-import { verifyToken, extractBearerToken, isTokenBlacklisted } from '../utils/jwt';
+import { verifyToken, extractBearerToken, isTokenBlacklisted } from '../utils/jwt.js';
 import { logger } from '../../utils/logger';
 import { AppError } from '../../middlewares/errorHandler';
 import { getRedisClient } from '../../utils/redis';
