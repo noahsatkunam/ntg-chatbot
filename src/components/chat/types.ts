@@ -4,7 +4,19 @@ export interface Message {
   role: 'user' | 'assistant';
   timestamp: Date;
   attachments?: Attachment[];
+  reactions?: MessageReaction[];
+  replyTo?: string; // ID of the message being replied to
+  status?: MessageStatus;
+  isEdited?: boolean;
 }
+
+export interface MessageReaction {
+  emoji: string;
+  users: string[]; // User IDs who reacted
+  count: number;
+}
+
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 export interface Attachment {
   id: string;
@@ -20,4 +32,17 @@ export interface ChatSession {
   messages: Message[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface TypingUser {
+  id: string;
+  name: string;
+  avatar?: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  avatar?: string;
+  isOnline?: boolean;
 }
