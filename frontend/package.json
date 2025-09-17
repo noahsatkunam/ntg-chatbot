@@ -19,6 +19,11 @@
     "test:e2e:ui": "playwright test --ui",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist node_modules/.vite",
+    "validate": "node scripts/build-validator.js",
+    "fix": "node scripts/build-fixer.js",
+    "build:safe": "npm run type-check && npm run build:lovable",
+    "build:debug": "npm run validate && npm run fix && npm run build:safe",
+    "build:minimal": "cross-env NODE_ENV=production vite build --config vite.config.minimal.ts --mode production --base=./",
     "postinstall": "npm run type-check"
   },
   "dependencies": {
