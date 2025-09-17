@@ -115,17 +115,19 @@ export interface ChatResponse {
 // Knowledge Base Types
 export interface KnowledgeDocument {
   id: string;
-  title: string;
-  content: string;
-  type: 'pdf' | 'doc' | 'txt' | 'url' | 'manual';
-  status: 'processing' | 'ready' | 'error';
-  tenantId: string;
-  uploadedBy: string;
-  metadata?: {
+  name: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  status: 'processing' | 'ready' | 'error' | 'processed' | 'failed';
+  metadata: {
     fileSize?: number;
     pageCount?: number;
     language?: string;
+    description?: string;
+    tags?: string[];
   };
+  tenantId: string;
   createdAt: string;
   updatedAt: string;
 }
