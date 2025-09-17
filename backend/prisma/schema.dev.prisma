@@ -1,0 +1,450 @@
+// Development Prisma schema with SQLite
+// This file is used for local development without Docker
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  TENANT_USER
+  END_USER
+}
+
+enum TokenType {
+  REFRESH
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum TenantPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PresenceStatus {
+  ONLINE
+  OFFLINE
+  AWAY
+  BUSY
+}
+
+model Tenant {
+  id                String          @id @default(uuid())
+  name              String
+  slug              String          @unique
+  status            TenantStatus    @default(TRIAL)
+  settings          String          @default("{}")  // JSON as TEXT in SQLite
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  // Relations
+  users             User[]
+  knowledgeDocuments KnowledgeDocument[]
+  knowledgeCollection KnowledgeCollection?
+  retrievalLogs     RetrievalLog[]
+  conversations     Conversation[]
+  processingJobs    ProcessingJob[]
+  searchAnalytics   SearchAnalytics[]
+  kbSettings        KnowledgeBaseSettings?
+  ragQueries        RagQuery[]
+  knowledgeFeedback KnowledgeFeedback[]
+  retrievalAnalytics RetrievalAnalytics[]
+  
+  @@map("tenants")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String
+  password              String
+  firstName             String?
+  lastName              String?
+  fullName              String?
+  avatar                String?
+  avatarUrl             String?
+  role                  Role      @default(END_USER)
+  isActive              Boolean   @default(true)
+  emailVerified         Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenantId              String?
+
+  // Relations
+  tenant                Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  knowledgeDocuments    KnowledgeDocument[]
+  retrievalLogs         RetrievalLog[]
+  participations        ConversationParticipant[]
+  messages              Message[]
+  reactions             MessageReaction[]
+  processingJobs        ProcessingJob[]
+  searchAnalytics       SearchAnalytics[]
+  documentVersions      DocumentVersion[]
+  ragQueries            RagQuery[]
+  knowledgeFeedback     KnowledgeFeedback[]
+
+  @@unique([email, tenantId])
+  @@map("users")
+}
+
+// Knowledge Base Models
+model KnowledgeDocument {
+  id             String   @id @default(cuid())
+  tenantId       String
+  filename       String
+  originalName   String
+  fileSize       Int
+  mimeType       String
+  status         DocumentStatus @default(PROCESSING)
+  processingProgress Int @default(0)
+  metadata       String?  // JSON as TEXT in SQLite
+  uploadedBy     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  processedAt    DateTime?
+  errorMessage   String?
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader  User             @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  chunks    DocumentChunk[]
+  versions  DocumentVersion[]
+  citations SourceCitation[]
+
+  @@map("knowledge_documents")
+}
+
+model DocumentChunk {
+  id             String   @id @default(cuid())
+  documentId     String
+  tenantId       String
+  content        String
+  chunkIndex     Int
+  startOffset    Int
+  endOffset      Int
+  tokenCount     Int
+  embeddingId    String?
+  metadata       String?  // JSON as TEXT in SQLite
+  createdAt      DateTime @default(now())
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@map("document_chunks")
+}
+
+model KnowledgeCollection {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  collectionName String
+  vectorDimension Int     @default(1536)
+  distanceMetric String  @default("cosine")
+  settings       String?  // JSON as TEXT in SQLite
+  documentCount  Int     @default(0)
+  totalChunks    Int     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_collections")
+}
+
+model EmbeddingCache {
+  id           String   @id @default(cuid())
+  textHash     String   @unique
+  model        String
+  embedding    String   // JSON as TEXT in SQLite
+  tokenCount   Int
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  @@map("embedding_cache")
+}
+
+model RetrievalLog {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String?
+  query         String
+  queryType     String   @default("semantic")
+  resultsCount  Int
+  responseTime  Int      // milliseconds
+  metadata      String?  // JSON as TEXT in SQLite
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("retrieval_logs")
+}
+
+model ProcessingJob {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String
+  jobType       String   // "document_upload", "batch_process", "reprocess"
+  status        String   @default("pending") // "pending", "processing", "completed", "failed"
+  progress      Int      @default(0) // 0-100
+  totalItems    Int      @default(1)
+  processedItems Int     @default(0)
+  errorMessage  String?
+  metadata      String?  // JSON as TEXT in SQLite
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  completedAt   DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("processing_jobs")
+}
+
+model DocumentVersion {
+  id           String   @id @default(cuid())
+  documentId   String
+  version      Int
+  filename     String
+  fileSize     Int
+  contentHash  String
+  changes      String?
+  metadata     String?  // JSON as TEXT in SQLite
+  createdAt    DateTime @default(now())
+  createdBy    String
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator  User              @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, version])
+  @@map("document_versions")
+}
+
+model SearchAnalytics {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String?
+  query         String
+  queryHash     String
+  resultsCount  Int
+  clickthrough  Int      @default(0)
+  responseTime  Int
+  searchType    String   @default("semantic")
+  filters       String?  // JSON as TEXT in SQLite
+  metadata      String?  // JSON as TEXT in SQLite
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("search_analytics")
+}
+
+model KnowledgeBaseSettings {
+  id                String   @id @default(cuid())
+  tenantId          String   @unique
+  chunkingStrategy  String   @default("semantic") // "semantic", "hierarchical", "overlapping"
+  chunkSize         Int      @default(1000)
+  chunkOverlap      Int      @default(200)
+  searchConfig      String   @default("{}")  // JSON as TEXT in SQLite
+  processingConfig  String   @default("{}")  // JSON as TEXT in SQLite
+  indexingConfig    String   @default("{}")  // JSON as TEXT in SQLite
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("kb_settings")
+}
+
+// Core Chat Models
+model Conversation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  title       String?
+  isGroup     Boolean  @default(false)
+  metadata    String?  // JSON as TEXT in SQLite
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages     Message[]
+  participants ConversationParticipant[]
+  ragQueries   RagQuery[]
+  settings     ConversationSettings?
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  tenantId       String
+  role           String   @default("member")
+  joinedAt       DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  tenantId       String
+  content        String
+  type           String   @default("text")
+  metadata       String?  // JSON as TEXT in SQLite
+  deleted        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions    MessageReaction[]
+  citations    SourceCitation[]
+  feedback     KnowledgeFeedback[]
+
+  @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  tenantId  String
+  reaction  String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, reaction])
+  @@map("message_reactions")
+}
+
+// RAG Analytics Models
+model RagQuery {
+  id                String   @id @default(cuid())
+  tenantId          String
+  userId            String?
+  conversationId    String?
+  query             String
+  queryHash         String
+  sourcesUsed       Int      @default(0)
+  confidence        Real     @default(0.0)  // REAL instead of Float for SQLite
+  retrievalStrategy String   @default("hybrid")
+  queryExpansions   String?  // JSON as TEXT in SQLite
+  responseTime      Int      // milliseconds
+  feedback          String?  // "helpful", "not_helpful", "partially_helpful"
+  feedbackComment   String?
+  createdAt         DateTime @default(now())
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  conversation Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  citations    SourceCitation[]
+
+  @@map("rag_queries")
+}
+
+model SourceCitation {
+  id             String   @id @default(cuid())
+  ragQueryId     String
+  messageId      String?
+  documentId     String
+  tenantId       String
+  relevanceScore Real     // REAL instead of Float for SQLite
+  citationNumber Int
+  usageCount     Int      @default(1)
+  excerpt        String
+  createdAt      DateTime @default(now())
+
+  ragQuery RagQuery            @relation(fields: [ragQueryId], references: [id], onDelete: Cascade)
+  message  Message?            @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  document KnowledgeDocument   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("source_citations")
+}
+
+model KnowledgeFeedback {
+  id             String   @id @default(cuid())
+  tenantId       String
+  userId         String
+  messageId      String?
+  ragQueryId     String?
+  rating         Int      // 1-5 scale
+  feedbackType   String   // "accuracy", "completeness", "relevance", "overall"
+  comments       String?
+  suggestions    String?  // JSON as TEXT in SQLite
+  createdAt      DateTime @default(now())
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message  Message?  @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  ragQuery RagQuery? @relation(fields: [ragQueryId], references: [id], onDelete: SetNull)
+
+  @@map("knowledge_feedback")
+}
+
+model RetrievalAnalytics {
+  id              String   @id @default(cuid())
+  tenantId        String
+  date            String   // DATE as TEXT in SQLite (YYYY-MM-DD)
+  queryCount      Int      @default(0)
+  successRate     Real     @default(0.0)  // REAL instead of Float for SQLite
+  averageConfidence Real   @default(0.0)  // REAL instead of Float for SQLite
+  topQueries      String?  // JSON as TEXT in SQLite
+  topSources      String?  // JSON as TEXT in SQLite
+  performanceMetrics String? // JSON as TEXT in SQLite
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@map("retrieval_analytics")
+}
+
+model ConversationSettings {
+  id             String   @id @default(cuid())
+  conversationId String   @unique
+  tenantId       String
+  ragMode        String   @default("hybrid") // "knowledge_only", "hybrid", "general"
+  maxSources     Int      @default(5)
+  confidenceThreshold Real @default(0.3)  // REAL instead of Float for SQLite
+  citationStyle  String   @default("numbered") // "numbered", "inline", "footnote"
+  includeConfidence Boolean @default(true)
+  autoSuggestQuestions Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("conversation_settings")
+}

@@ -28,6 +28,8 @@
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "clean": "rimraf node_modules frontend/node_modules backend/node_modules frontend/dist backend/dist",
     "env:setup": "cp .env.example .env && echo 'Environment file created. Please update .env with your actual values.'",
+    "dev:setup": "node scripts/dev-setup.js",
+    "dev:start": "node scripts/dev-start.js",
     "env:validate": "node scripts/validate-env.js",
     "db:migrate": "cd backend && npm run prisma:migrate:dev",
     "db:seed": "cd backend && npm run prisma:seed",

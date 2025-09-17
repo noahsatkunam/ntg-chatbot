@@ -14,6 +14,7 @@ import { initializeRedis } from './utils/redis';
 import { startCSRFCleanup } from './middlewares/csrf';
 import { createServer } from 'http';
 import { WebSocketServer } from './websocket/websocketServer';
+import { initializeLocalDevelopment, isLocalDevelopment } from './config/localDevelopment.js';
 import path from 'path';
 import authRoutes from './auth/routes/authRoutes';
 import chatRoutes from './chat/routes/chatRoutes';
@@ -24,6 +25,7 @@ import searchRoutes from './search/routes/searchRoutes';
 import advancedMessageRoutes from './chat/routes/advancedMessageRoutes';
 import knowledgeRoutes from './knowledge/routes/knowledgeRoutes';
 import ragRoutes from './knowledge/routes/ragRoutes';
+import healthRoutes from './routes/health.js';
 
 // Load environment variables
 dotenv.config();
@@ -101,29 +103,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Logging
 app.use(pinoHttp({ logger }));
 
-// Health check
-app.get('/health', async (_req, res) => {
-  try {
-    // Check database connection
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      services: {
-        api: 'healthy',
-        websocket: 'healthy',
-        database: 'healthy',
-      }
-    });
-  } catch (error) {
-    res.status(503).json({ 
-      status: 'error', 
-      timestamp: new Date().toISOString(),
-      message: 'Service unavailable',
-    });
-  }
-});
+// Health routes
+app.use('/api', healthRoutes);
 
 // Register routes
 app.use('/api/auth', authRoutes);
@@ -172,9 +153,17 @@ process.on('SIGINT', async () => {
 // Initialize services
 async function startServer() {
   try {
-    // Initialize Redis
-    await initializeRedis();
-    logger.info('Redis initialized');
+    // Initialize local development if needed
+    if (isLocalDevelopment()) {
+      initializeLocalDevelopment();
+      logger.info('Local development environment initialized');
+    }
+
+    // Initialize Redis (or mock service)
+    if (!isLocalDevelopment()) {
+      await initializeRedis();
+      logger.info('Redis initialized');
+    }
 
     // Start CSRF token cleanup
     startCSRFCleanup();
@@ -182,6 +171,9 @@ async function startServer() {
     // Start server
     app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+      if (isLocalDevelopment()) {
+        logger.info('Running in local development mode with mock services');
+      }
     });
   } catch (error) {
     logger.error('Failed to start server', { error });
