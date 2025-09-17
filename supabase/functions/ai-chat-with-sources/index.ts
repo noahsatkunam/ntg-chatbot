@@ -84,18 +84,27 @@ serve(async (req) => {
           const embeddingData = await embeddingResponse.json();
           const queryEmbedding = embeddingData.data[0].embedding;
 
-          // Search for relevant document chunks
-          const { data: chunks, error: searchError } = await supabase.rpc('search_documents', {
-            query_embedding: queryEmbedding,
-            match_threshold: 0.7,
-            match_count: 5,
-          });
+        // Search for relevant document chunks
+        const { data: chunks, error: searchError } = await supabase.rpc('search_documents', {
+          query_embedding: queryEmbedding,
+          match_threshold: 0.7,
+          match_count: 5,
+        });
 
-          if (!searchError && chunks?.length > 0) {
-            relevantSources = chunks;
-            responseType = 'knowledge_based';
-            console.log(`Found ${relevantSources.length} relevant sources`);
-          }
+        if (!searchError && chunks?.length > 0) {
+          relevantSources = chunks.map((chunk: any) => ({
+            id: chunk.id,
+            content: chunk.content,
+            document_id: chunk.document_id,
+            document_title: chunk.document_title,
+            document_file_name: chunk.document_file_name,
+            similarity: chunk.similarity,
+          }));
+          responseType = 'knowledge_based';
+          console.log(`Found ${relevantSources.length} relevant sources`);
+        } else if (searchError) {
+          console.warn('Vector search failed:', searchError);
+        }
         }
       } catch (error) {
         console.warn('Knowledge base search failed, using general knowledge:', error);

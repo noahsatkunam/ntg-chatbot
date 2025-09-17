@@ -69,12 +69,15 @@ serve(async (req) => {
     });
 
     if (searchError) {
-      console.error('Search error:', searchError);
+      console.error('Vector search error:', searchError);
       // Fallback to simple text search if vector search fails
       const { data: fallbackChunks, error: fallbackError } = await supabase
         .from('document_chunks')
         .select(`
-          *,
+          id,
+          content,
+          document_id,
+          created_at,
           documents!inner(
             id,
             title,
@@ -90,14 +93,27 @@ serve(async (req) => {
         .limit(limit);
 
       if (fallbackError) {
+        console.error('Text search also failed:', fallbackError);
         throw fallbackError;
       }
 
       const results = fallbackChunks?.map(chunk => ({
-        ...chunk,
+        id: chunk.id,
+        content: chunk.content,
+        document_id: chunk.document_id,
+        document_title: chunk.documents.title,
+        document_file_name: chunk.documents.file_name,
+        document_description: chunk.documents.description,
         similarity: 0.5, // Default similarity for text search
-        document: chunk.documents,
+        created_at: chunk.created_at,
       })) || [];
+
+      // Log the search
+      await supabase.from('knowledge_base_searches').insert({
+        user_id: user.id,
+        query,
+        results_count: results.length,
+      });
 
       return new Response(JSON.stringify({ results, searchType: 'text' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -112,8 +128,14 @@ serve(async (req) => {
     });
 
     const results = chunks?.map((chunk: any) => ({
-      ...chunk,
+      id: chunk.id,
+      content: chunk.content,
+      document_id: chunk.document_id,
+      document_title: chunk.document_title,
+      document_file_name: chunk.document_file_name,
+      document_description: chunk.document_description,
       similarity: chunk.similarity || 0,
+      created_at: chunk.created_at,
     })) || [];
 
     console.log(`Found ${results.length} relevant chunks`);
