@@ -1,14 +1,17 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  server: {
-    host: "::",
-    port: 8080,
-  },
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  return {
+    server: {
+      host: "::",
+      port: parseInt(env.VITE_PORT) || 5173,
+    },
   plugins: [
     react(),
     VitePWA({
@@ -39,26 +42,35 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
-          utils: ['axios', 'socket.io-client'],
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+            utils: ['axios', 'socket.io-client', 'zod'],
+            router: ['react-router-dom'],
+          },
         },
       },
+      sourcemap: command === 'serve',
+      minify: mode === 'production' ? 'terser' : false,
+      terserOptions: mode === 'production' ? {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+        },
+      } : undefined,
+      chunkSizeWarningLimit: 1000,
     },
-    sourcemap: false,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      __DEV__: mode === 'development',
     },
-  },
-  define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-  },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'axios', 'socket.io-client'],
+    },
+  };
 });

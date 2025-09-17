@@ -6,15 +6,20 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:production": "cross-env NODE_ENV=production tsc && vite build --mode production",
+    "build:lovable": "cross-env NODE_ENV=production tsc && vite build --mode production --base=./",
     "build:dev": "vite build --mode development",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist node_modules/.vite",
+    "postinstall": "npm run type-check"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -97,6 +102,12 @@
     "msw": "^2.0.11",
     "@types/node": "^20.10.4",
     "vite-plugin-pwa": "^0.17.4",
-    "workbox-window": "^7.0.0"
+    "workbox-window": "^7.0.0",
+    "rimraf": "^5.0.5",
+    "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
