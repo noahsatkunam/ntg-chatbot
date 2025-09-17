@@ -60,6 +60,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.89.0",
     "lovable-tagger": "^1.1.9",
+    "lucide-react": "^0.544.0",
     "react-router-dom": "^7.9.1",
     "web-vitals": "^5.1.0"
   }

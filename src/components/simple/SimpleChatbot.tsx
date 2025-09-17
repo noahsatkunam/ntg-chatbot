@@ -84,20 +84,20 @@ export const SimpleChatbot: React.FC<SimpleChatbotProps> = ({ className = '' }) 
   };
 
   return (
-    <div className={`flex flex-col h-full bg-white border border-gray-200 rounded-lg shadow-lg ${className}`}>
+    <div className={`flex flex-col h-full bg-card border border-border rounded-lg shadow-elegant ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="flex items-center justify-between p-4 border-b bg-gradient-subtle">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-chat rounded-full flex items-center justify-center">
             <Bot className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">AI Assistant</h2>
-            <p className="text-sm text-gray-600">Powered by NTG Platform</p>
+            <h2 className="text-lg font-semibold text-foreground">AI Assistant</h2>
+            <p className="text-sm text-muted-foreground">Powered by NTG Platform</p>
           </div>
         </div>
         
-        <div className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+        <div className="px-3 py-1 bg-analytics-secondary/10 text-analytics-secondary text-xs font-medium rounded-full">
           Online
         </div>
       </div>
@@ -110,21 +110,21 @@ export const SimpleChatbot: React.FC<SimpleChatbotProps> = ({ className = '' }) 
             <div key={message.id} className={`flex gap-3 ${isBot ? 'flex-row' : 'flex-row-reverse'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 isBot 
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600' 
-                  : 'bg-gradient-to-r from-gray-500 to-gray-600'
+                  ? 'bg-gradient-chat' 
+                  : 'bg-muted'
               }`}>
                 {isBot ? (
                   <Bot className="w-4 h-4 text-white" />
                 ) : (
-                  <User className="w-4 h-4 text-white" />
+                  <User className="w-4 h-4 text-muted-foreground" />
                 )}
               </div>
 
               <div className={`max-w-[75%] ${isBot ? 'text-left' : 'text-right'}`}>
                 <div className={`inline-block p-3 rounded-2xl ${
                   isBot
-                    ? 'bg-gray-100 text-gray-900 rounded-bl-sm'
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-sm'
+                    ? 'bg-chat-bot-bubble text-chat-bot-bubble-foreground rounded-bl-sm'
+                    : 'bg-chat-user-bubble text-chat-user-bubble-foreground rounded-br-sm'
                 }`}>
                   {message.isTyping ? (
                     <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export const SimpleChatbot: React.FC<SimpleChatbotProps> = ({ className = '' }) 
                   )}
                 </div>
                 
-                <div className={`mt-1 text-xs text-gray-500 ${isBot ? 'text-left' : 'text-right'}`}>
+                <div className={`mt-1 text-xs text-muted-foreground ${isBot ? 'text-left' : 'text-right'}`}>
                   {message.timestamp.toLocaleTimeString([], { 
                     hour: '2-digit', 
                     minute: '2-digit' 
@@ -160,9 +160,9 @@ export const SimpleChatbot: React.FC<SimpleChatbotProps> = ({ className = '' }) 
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-gray-50">
+      <div className="p-4 border-t bg-muted/20">
         <div className="flex items-end gap-3">
-          <button className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
+          <button className="p-2 text-muted-foreground hover:text-chat-primary hover:bg-chat-hover rounded-full transition-colors">
             <Paperclip className="w-5 h-5" />
           </button>
 
@@ -172,12 +172,12 @@ export const SimpleChatbot: React.FC<SimpleChatbotProps> = ({ className = '' }) 
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type your message here..."
-              className="w-full min-h-[44px] max-h-32 resize-none border border-gray-300 rounded-2xl px-4 py-3 pr-12 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full min-h-[44px] max-h-32 resize-none border border-chat-input-border bg-chat-input-bg rounded-2xl px-4 py-3 pr-12 focus:outline-none focus:border-chat-primary focus:ring-1 focus:ring-chat-primary text-foreground placeholder:text-muted-foreground"
               rows={1}
               disabled={isStreaming}
             />
             
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-blue-600 rounded-full transition-colors">
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-chat-primary rounded-full transition-colors">
               <Mic className="w-4 h-4" />
             </button>
           </div>
@@ -185,13 +185,13 @@ export const SimpleChatbot: React.FC<SimpleChatbotProps> = ({ className = '' }) 
           <button
             onClick={handleSendMessage}
             disabled={!input.trim() || isStreaming}
-            className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="p-3 bg-gradient-chat hover:opacity-90 text-white rounded-full transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="text-xs text-gray-500 text-center mt-2">
+        <div className="text-xs text-muted-foreground text-center mt-2">
           Press Enter to send • Shift+Enter for new line
         </div>
       </div>
