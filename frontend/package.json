@@ -23,8 +23,7 @@
     "fix": "node scripts/build-fixer.js",
     "build:safe": "npm run type-check && npm run build:lovable",
     "build:debug": "npm run validate && npm run fix && npm run build:safe",
-    "build:minimal": "cross-env NODE_ENV=production vite build --config vite.config.minimal.ts --mode production --base=./",
-    "postinstall": "npm run type-check"
+    "build:minimal": "cross-env NODE_ENV=production vite build --config vite.config.minimal.ts --mode production --base=./"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

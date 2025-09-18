@@ -2,7 +2,7 @@
 export default {
   // Build configuration (runs in the frontend workspace)
   build: {
-    command: 'sh -c "npm --prefix frontend install --ignore-scripts --no-audit --fund=false && npm --prefix frontend run build:lovable"',
+    command: 'sh -c "npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run build:lovable"',
     directory: 'frontend/dist',
     environment: {
       NODE_VERSION: '18',
@@ -13,7 +13,7 @@ export default {
 
   // Development configuration (use Vite dev server from frontend)
   dev: {
-    command: 'sh -c "npm --prefix frontend install --ignore-scripts --no-audit --fund=false && npm --prefix frontend run dev"',
+    command: 'sh -c "npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run dev"',
     port: 5173
   },
 
