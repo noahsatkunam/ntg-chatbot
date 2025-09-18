@@ -2,18 +2,18 @@
 export default {
   // Build configuration (runs in the frontend workspace)
   build: {
-    command: 'sh -c "npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run build:lovable"',
+    command: 'npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run build:lovable',
     directory: 'frontend/dist',
     environment: {
-      NODE_VERSION: '18',
-      NPM_VERSION: '9',
+      NODE_VERSION: '20',
+      NPM_VERSION: '10',
       NODE_ENV: 'production'
     }
   },
 
   // Development configuration (use Vite dev server from frontend)
   dev: {
-    command: 'sh -c "npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run dev"',
+    command: 'npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run dev',
     port: 5173
   },
 
@@ -59,6 +59,19 @@ export default {
     VITE_PREVIEW_MODE: 'true',
     VITE_LOVABLE_PREVIEW: 'true',
     VITE_MOCK_BACKEND: 'true',
-    VITE_ENABLE_AUTH: 'false'
+    VITE_ENABLE_AUTH: 'false',
+    VITE_API_URL: '/api',
+    VITE_WS_URL: '',
+    VITE_PORT: '5173',
+    VITE_MOCK_AUTH: 'true',
+    VITE_ENABLE_STREAMING: 'false',
+    VITE_ENABLE_FILE_UPLOAD: 'false',
+    VITE_ENABLE_ANALYTICS: 'false',
+    VITE_ENABLE_WORKFLOWS: 'false',
+    VITE_ENABLE_2FA: 'false',
+    VITE_ENABLE_MOCK_DATA: 'true',
+    VITE_ENABLE_DEV_TOOLS: 'true',
+    VITE_ENABLE_DEBUG: 'true',
+    VITE_BASE_URL: './'
   }
 };
