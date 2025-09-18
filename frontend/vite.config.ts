@@ -8,6 +8,7 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
+    base: mode === 'production' ? './' : '/',
     server: {
       host: true,
       port: parseInt(env.VITE_PORT) || 5173,
