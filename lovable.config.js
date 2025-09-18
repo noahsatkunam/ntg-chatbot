@@ -13,7 +13,7 @@ export default {
 
   // Development configuration (use Vite dev server from frontend)
   dev: {
-    command: 'npm --prefix frontend run dev',
+    command: 'sh -c "npm --prefix frontend install --no-audit --fund=false && npm --prefix frontend run dev"',
     port: 5173
   },
 
