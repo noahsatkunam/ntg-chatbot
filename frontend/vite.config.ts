@@ -12,6 +12,7 @@ export default defineConfig(({ command, mode }) => {
     server: {
       host: true,
       port: parseInt(env.VITE_PORT) || 5173,
+      strictPort: true,
     },
   plugins: [
     react(),
